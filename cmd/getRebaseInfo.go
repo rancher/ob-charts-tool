@@ -1,7 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
@@ -13,13 +9,7 @@ import (
 // getRebaseInfoCmd represents the getRebaseInfo command
 var getRebaseInfoCmd = &cobra.Command{
 	Use:   "getRebaseInfo",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Collect the basic information about a potential rebase target version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("getRebaseInfo called")
 	},

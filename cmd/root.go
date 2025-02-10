@@ -1,9 +1,5 @@
 package cmd
 
-/*
-Copyright © 2025 Dan Pock dan.pock@suse.com
-*/
-
 import (
 	"os"
 

@@ -1,7 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
@@ -13,13 +9,9 @@ import (
 // verifyChartImagesCmd represents the verifyChartImages command
 var verifyChartImagesCmd = &cobra.Command{
 	Use:   "verifyChartImages",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Verify that the rancher mirrored images for a target monitoring chart exist",
+	Long: `Using either a version as first arg, or helm chart debug output from STDIN, this command will output a list
+of the necessary images used in the chart. And then verify those are mirrored by the Rancher Image mirror.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("verifyChartImages called")
 	},
