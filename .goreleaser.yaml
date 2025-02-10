@@ -23,7 +23,7 @@ builds:
       - darwin
 
 archives:
-  - name_template: '{{ .Binary }}-{{ .Arch }}'
+  - name_template: '{{ .Binary }}-{{ .Os }}-{{ .Arch }}'
 
 changelog:
   sort: asc
