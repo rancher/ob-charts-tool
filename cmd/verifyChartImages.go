@@ -1,13 +1,17 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/mallardduck/ob-charts-tool/internal/charts"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
+	"os/exec"
+	"strings"
 )
 
 // verifyChartImagesCmd represents the verifyChartImages command
@@ -34,16 +38,6 @@ of the necessary images used in the chart. And then verify those are mirrored by
 
 func init() {
 	rootCmd.AddCommand(verifyChartImagesCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// verifyChartImagesCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// verifyChartImagesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // Helper function to determine if there's data from stdin
@@ -58,39 +52,85 @@ func isDataFromStdin() bool {
 }
 
 func verifyChartImagesHandler(cmd *cobra.Command, args []string) {
+	var data []byte
+	var err error
 	if len(args) == 1 {
-		fmt.Println("Received argument:", args[0])
-		// TODO: fetch chart and process it, then do STDIN route
+		targetVersion := args[0]
+		fmt.Println(
+			text.AlignCenter.Apply(
+				text.Color.Sprintf(text.FgBlue, "Looking for `rancher-monitoring` chart with version `%s`...", targetVersion),
+				125,
+			),
+		)
+		cwd, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+
+		chartTargetRoot := fmt.Sprintf("%s/charts/rancher-monitoring/%s", cwd, targetVersion)
+		if _, err := os.Stat(chartTargetRoot); os.IsNotExist(err) {
+			panic(fmt.Sprintf("Cannot find a monitoring chart with the provided version (%s)", targetVersion))
+		}
+
+		fmt.Println(
+			text.Color.Sprintf(text.FgBlue, "The %s chart was found - next this tool will run `helm debug` to get the rendered chart.", targetVersion),
+		)
+
+		var helmArgs string
+		if _, err := os.Stat(fmt.Sprintf("%s/debug.yaml", cwd)); !os.IsNotExist(err) {
+			helmArgs = fmt.Sprintf("template --debug rancher-monitoring %s -f %s/debug.yaml -n cattle-monitoring-system", chartTargetRoot, cwd)
+		} else {
+			helmArgs = fmt.Sprintf("template --debug rancher-monitoring %s -n cattle-monitoring-system", chartTargetRoot)
+		}
+		log.Debug(helmArgs)
+		cmd := exec.Command("helm", strings.Split(helmArgs, " ")...)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		if err != nil {
+			log.Error(stderr.String())
+			panic(err)
+		}
+
+		data = stdout.Bytes()
+
 	} else if isDataFromStdin() {
 		// Read stdin data
-		data, err := io.ReadAll(os.Stdin)
+		data, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			fmt.Println("Error reading stdin:", err)
 			return
 		}
-		fmt.Println(text.AlignCenter.Apply("Starting to process from stdin...", 75))
-		imagesLists, err := charts.PrepareChartImagesList(string(data))
-		err = charts.ProcessRenderedChartImages(&imagesLists)
-		if err != nil {
-			return
-		}
-		checkedImages := charts.CheckRancherImages(imagesLists.RancherImages)
-		t := table.NewWriter()
-		t.SetOutputMirror(os.Stdout)
-		t.AppendHeader(table.Row{"#", "Image", "Status"})
-		idx := 0
-		for image, status := range checkedImages {
-			idx++
-			statusIcon := "✅"
-			if !status {
-				statusIcon = "❌"
-			}
-			t.AppendRow(table.Row{
-				idx,
-				image,
-				statusIcon,
-			})
-		}
-		t.Render()
+		fmt.Println(text.AlignCenter.Apply(text.Color.Sprint(text.FgBlue, "Starting to process from stdin..."), 75))
 	}
+	if len(data) > 0 {
+		processHelmChartImages(string(data))
+	}
+}
+
+func processHelmChartImages(helmChart string) {
+	imagesLists, err := charts.PrepareChartImagesList(helmChart)
+	err = charts.ProcessRenderedChartImages(&imagesLists)
+	if err != nil {
+		return
+	}
+	checkedImages := charts.CheckRancherImages(imagesLists.RancherImages)
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"#", "Image", "Status"})
+	idx := 0
+	for image, status := range checkedImages {
+		idx++
+		statusIcon := "✅"
+		if !status {
+			statusIcon = "❌"
+		}
+		t.AppendRow(table.Row{
+			idx,
+			image,
+			statusIcon,
+		})
+	}
+	t.Render()
 }

@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -24,6 +27,29 @@ to quickly create a Cobra application.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	logLevel := viper.GetString("log_level")
+	if logLevel == "" {
+		logLevel = "warn"
+	}
+
+	// Set up logging based on logLevel
+	switch strings.ToLower(logLevel) {
+	case "debug":
+		log.SetOutput(os.Stderr)
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetOutput(os.Stderr)
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetOutput(os.Stderr)
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetOutput(os.Stderr)
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.Println("Invalid log level")
+	}
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
@@ -31,13 +57,10 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ob-charts-tool.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	viper.SetEnvPrefix("OB")
+	viper.AutomaticEnv()
+	err := viper.BindEnv("log_level")
+	if err != nil {
+		return
+	}
 }
