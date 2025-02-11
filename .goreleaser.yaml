@@ -8,6 +8,8 @@
 
 version: 2
 
+project_name: ob-charts-tool
+
 before:
   hooks:
     - go mod tidy
@@ -23,7 +25,8 @@ builds:
       - darwin
 
 archives:
-  - name_template: '{{ .Binary }}-{{ .Os }}-{{ .Arch }}'
+  - format: binary
+    name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
 
 changelog:
   sort: asc
