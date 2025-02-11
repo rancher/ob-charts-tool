@@ -1,12 +1,20 @@
 package cmd
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+)
+
+var (
+	// Version represents the current version of the chart build scripts
+	Version = "v0.0.0-dev"
+	// GitCommit represents the latest commit when building this script
+	GitCommit = "HEAD"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -19,9 +27,7 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Version: fmt.Sprintf("v%s (%s)", Version, GitCommit),
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
