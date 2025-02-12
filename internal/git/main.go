@@ -2,12 +2,13 @@ package git
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mallardduck/ob-charts-tool/internal/util"
 	log "github.com/sirupsen/logrus"
-	"strings"
 )
 
 func VerifyTagExists(repo string, tag string) (bool, string) {

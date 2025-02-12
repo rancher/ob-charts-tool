@@ -3,14 +3,15 @@ package charts
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jedib0t/go-pretty/list"
-	"github.com/mallardduck/ob-charts-tool/internal/util"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/jedib0t/go-pretty/list"
+	"github.com/mallardduck/ob-charts-tool/internal/util"
+	log "github.com/sirupsen/logrus"
 )
 
 type ImageLists struct {

@@ -2,10 +2,11 @@ package git
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
-	"strings"
 )
 
 // extractVersion extracts the semantic version from a git tag reference.

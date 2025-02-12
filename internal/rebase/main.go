@@ -2,11 +2,12 @@ package rebase
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/mallardduck/ob-charts-tool/internal/util"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	"io"
-	"net/http"
 )
 
 const (

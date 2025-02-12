@@ -2,13 +2,14 @@ package upstream
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mallardduck/ob-charts-tool/internal/git"
 	"github.com/mallardduck/ob-charts-tool/internal/rebase"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	"os"
-	"strings"
 )
 
 const (

@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/mallardduck/ob-charts-tool/internal/upstream"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // getRebaseInfoCmd represents the getRebaseInfo command

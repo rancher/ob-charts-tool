@@ -3,15 +3,16 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/mallardduck/ob-charts-tool/internal/charts"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io"
-	"os"
-	"os/exec"
-	"strings"
 )
 
 // verifyChartImagesCmd represents the verifyChartImages command
