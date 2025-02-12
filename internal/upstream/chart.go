@@ -13,13 +13,13 @@ import (
 )
 
 const (
-	upstreamGrafanaChartsUrl    = "https://github.com/grafana/helm-charts.git"
-	upstreamPrometheusChartsUrl = "https://github.com/prometheus-community/helm-charts.git"
+	upstreamGrafanaChartsURL    = "https://github.com/grafana/helm-charts.git"
+	upstreamPrometheusChartsURL = "https://github.com/prometheus-community/helm-charts.git"
 	upstreamVersionTemplate     = "kube-prometheus-stack-%s"
 )
 
 func ChartVersionExists(version string) (bool, string) {
-	return git.VerifyTagExists(upstreamPrometheusChartsUrl, fmt.Sprintf(upstreamVersionTemplate, version))
+	return git.VerifyTagExists(upstreamPrometheusChartsURL, fmt.Sprintf(upstreamVersionTemplate, version))
 }
 
 func PrepareRebaseRequestInfo(version string, gitHash string) rebase.StartRequest {
@@ -37,7 +37,7 @@ func PrepareRebaseRequestInfo(version string, gitHash string) rebase.StartReques
 type RebaseInfo struct {
 	TargetVersion           string                   `yaml:"target_version"`
 	TargetCommitHash        string                   `yaml:"commit_hash"`
-	ChartFileUrl            string                   `yaml:"chart_file_url"`
+	ChartFileURL            string                   `yaml:"chart_file_url"`
 	ChartDependencies       []rebase.ChartDep        `yaml:"chart_dependencies"`
 	DependencyChartVersions []DependencyChartVersion `yaml:"dependency_chart_versions"`
 	ChartsImagesLists       map[string][]string      `yaml:"charts_images_lists"`
@@ -53,7 +53,7 @@ func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
 	rebaseInfo := RebaseInfo{
 		TargetVersion:     request.TargetVersion,
 		TargetCommitHash:  request.TargetCommitHash,
-		ChartFileUrl:      request.ChartFileUrl,
+		ChartFileURL:      request.ChartFileURL,
 		ChartDependencies: request.ChartDependencies,
 	}
 
@@ -75,10 +75,10 @@ func findNewestReleaseTag(chartDep rebase.ChartDep) (bool, *plumbing.Reference) 
 		version = strings.ReplaceAll(version, ".*", "")
 	}
 
-	repo := upstreamPrometheusChartsUrl
+	repo := upstreamPrometheusChartsURL
 	tag := fmt.Sprintf("%s-%s", chartDep.Name, version)
 	if strings.Contains(chartDep.Name, "grafana") {
-		repo = upstreamGrafanaChartsUrl
+		repo = upstreamGrafanaChartsURL
 	}
 
 	found, tags := git.FindTagsMatching(repo, tag)

@@ -13,7 +13,7 @@ func NewSet[T comparable]() Set[T] {
 
 func (s Set[T]) Add(item T) error {
 	if IsEmpty(item) {
-		return fmt.Errorf("Cannot add empty value into set.")
+		return fmt.Errorf("cannot add empty value into set")
 	}
 	s[item] = struct{}{}
 	return nil

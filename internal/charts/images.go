@@ -28,7 +28,7 @@ func newImageLists() ImageLists {
 	}
 }
 
-func PrepareChartImagesList(chart string) (ImageLists, error) {
+func PrepareChartImagesList(chart string) ImageLists {
 	imageListRes := newImageLists()
 
 	log.Debug("Looking for images...with `image:` strings")
@@ -87,7 +87,7 @@ func PrepareChartImagesList(chart string) (ImageLists, error) {
 		imagesSet.Remove(item)
 	}
 
-	return imageListRes, nil
+	return imageListRes
 }
 
 func ProcessRenderedChartImages(chartImages *ImageLists) error {
@@ -143,14 +143,14 @@ func checkImageTagExists(image string) bool {
 	tag := imageParts[1]
 
 	imageRequestToken := getDockerHubToken(repo)
-	return makeImageTagRequest(imageRequestToken, fmt.Sprintf(manifestUriTemplate, repo, tag))
+	return makeImageTagRequest(imageRequestToken, fmt.Sprintf(manifestURLTemplate, repo, tag))
 }
 
 const (
-	dockerTokenUri      = "https://auth.docker.io/token"
+	dockerTokenURL      = "https://auth.docker.io/token"
 	dockerService       = "registry.docker.io"
 	scopeTemplate       = "repository:%s:pull"
-	manifestUriTemplate = "https://registry-1.docker.io/v2/%s/manifests/%s"
+	manifestURLTemplate = "https://registry-1.docker.io/v2/%s/manifests/%s"
 )
 
 func getDockerHubToken(repo string) string {
@@ -161,7 +161,7 @@ func getDockerHubToken(repo string) string {
 	params.Add("scope", requestScope)
 
 	// Construct full URL with encoded query parameters
-	fullURL := fmt.Sprintf("%s?%s", dockerTokenUri, params.Encode())
+	fullURL := fmt.Sprintf("%s?%s", dockerTokenURL, params.Encode())
 	resp, err := http.Get(fullURL)
 	if err != nil {
 		log.Fatal(err)

@@ -21,7 +21,7 @@ var verifyChartImagesCmd = &cobra.Command{
 	Short: "Verify that the rancher mirrored images for a target monitoring chart exist",
 	Long: `Using either a version as first arg, or helm chart debug output from STDIN, this command will output a list
 of the necessary images used in the chart. And then verify those are mirrored by the Rancher Image mirror.`,
-	Args: func(cmd *cobra.Command, args []string) error {
+	Args: func(_ *cobra.Command, args []string) error {
 		// Check if there's one argument provided
 		if len(args) == 1 {
 			return nil
@@ -52,7 +52,7 @@ func isDataFromStdin() bool {
 	return info.Mode()&os.ModeCharDevice == 0
 }
 
-func verifyChartImagesHandler(cmd *cobra.Command, args []string) {
+func verifyChartImagesHandler(_ *cobra.Command, args []string) {
 	var data []byte
 	var err error
 	if len(args) == 1 {
@@ -111,8 +111,8 @@ func verifyChartImagesHandler(cmd *cobra.Command, args []string) {
 }
 
 func processHelmChartImages(helmChart string) {
-	imagesLists, err := charts.PrepareChartImagesList(helmChart)
-	err = charts.ProcessRenderedChartImages(&imagesLists)
+	imagesLists := charts.PrepareChartImagesList(helmChart)
+	err := charts.ProcessRenderedChartImages(&imagesLists)
 	if err != nil {
 		return
 	}

@@ -11,20 +11,20 @@ import (
 )
 
 const (
-	upstreamChartUrl = "https://raw.githubusercontent.com/prometheus-community/helm-charts/%s/charts/kube-prometheus-stack/Chart.yaml"
+	upstreamChartURL = "https://raw.githubusercontent.com/prometheus-community/helm-charts/%s/charts/kube-prometheus-stack/Chart.yaml"
 )
 
 type StartRequest struct {
 	TargetVersion     string
 	TargetCommitHash  string
-	ChartFileUrl      string
+	ChartFileURL      string
 	targetChart       []byte
 	ChartDependencies []ChartDep
 }
 
 func (s *StartRequest) FetchChart() {
-	s.ChartFileUrl = fmt.Sprintf(upstreamChartUrl, s.TargetCommitHash)
-	resp, err := http.Get(s.ChartFileUrl)
+	s.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.TargetCommitHash)
+	resp, err := http.Get(s.ChartFileURL)
 	if err != nil {
 		log.Fatal(err)
 	}

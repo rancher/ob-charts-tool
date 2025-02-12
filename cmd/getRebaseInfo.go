@@ -14,7 +14,7 @@ import (
 var getRebaseInfoCmd = &cobra.Command{
 	Use:   "getRebaseInfo",
 	Short: "Collect the basic information about a potential rebase target version",
-	Args: func(cmd *cobra.Command, args []string) error {
+	Args: func(_ *cobra.Command, args []string) error {
 		// Check if there's one argument provided
 		if len(args) == 1 {
 			return nil
@@ -29,7 +29,7 @@ func init() {
 	rootCmd.AddCommand(getRebaseInfoCmd)
 }
 
-func getRebaseInfoHandler(cmd *cobra.Command, args []string) {
+func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		panic(err)
