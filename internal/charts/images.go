@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jedib0t/go-pretty/list"
-	"github.com/mallardduck/ob-charts-tool/internal/set"
+	"github.com/mallardduck/ob-charts-tool/internal/util"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
@@ -14,16 +14,16 @@ import (
 )
 
 type ImageLists struct {
-	NeedsManualCheck set.Set[string]
-	RancherImages    set.Set[string]
-	NonRancherImages set.Set[string]
+	NeedsManualCheck util.Set[string]
+	RancherImages    util.Set[string]
+	NonRancherImages util.Set[string]
 }
 
 func newImageLists() ImageLists {
 	return ImageLists{
-		set.New[string](),
-		set.New[string](),
-		set.New[string](),
+		util.NewSet[string](),
+		util.NewSet[string](),
+		util.NewSet[string](),
 	}
 }
 
@@ -34,7 +34,7 @@ func PrepareChartImagesList(chart string) (ImageLists, error) {
 	// Process the input to extract unique image:tag values
 	re := regexp.MustCompile(`image: (.*)`)
 	imageList := re.FindAllString(chart, -1)
-	imagesSet := set.New[string]()
+	imagesSet := util.NewSet[string]()
 	for _, image := range imageList {
 		_ = imagesSet.Add(image)
 	}
@@ -43,7 +43,7 @@ func PrepareChartImagesList(chart string) (ImageLists, error) {
 	// Process the input to extract unique image:tag values
 	re = regexp.MustCompile(`(.*)docker.io(.*)`)
 	imageList = re.FindAllString(chart, -1)
-	imageList = filterSlice(imageList, func(s string) bool {
+	imageList = util.FilterSlice(imageList, func(s string) bool {
 		return !strings.Contains(strings.ToLower(s), "registry:")
 	})
 	for _, image := range imageList {
@@ -89,16 +89,6 @@ func PrepareChartImagesList(chart string) (ImageLists, error) {
 	return imageListRes, nil
 }
 
-func filterSlice[T any](slice []T, filterFn func(T) bool) []T {
-	filteredSlice := make([]T, 0)
-	for _, element := range slice {
-		if filterFn(element) {
-			filteredSlice = append(filteredSlice, element)
-		}
-	}
-	return filteredSlice
-}
-
 func ProcessRenderedChartImages(chartImages *ImageLists) error {
 	if !chartImages.RancherImages.IsEmpty() {
 		fmt.Println("\n🩻 We will check these images:")
@@ -133,7 +123,7 @@ func ProcessRenderedChartImages(chartImages *ImageLists) error {
 	return nil
 }
 
-func CheckRancherImages(rancherImages set.Set[string]) map[string]bool {
+func CheckRancherImages(rancherImages util.Set[string]) map[string]bool {
 	res := make(map[string]bool)
 	// Make list of all images and their results,
 	// Prepare list to table,

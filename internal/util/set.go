@@ -1,4 +1,4 @@
-package set
+package util
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 type Set[T comparable] map[T]struct{}
 
-func New[T comparable]() Set[T] {
+func NewSet[T comparable]() Set[T] {
 	return make(Set[T])
 }
 
@@ -29,7 +29,7 @@ func (s Set[T]) Remove(item T) {
 }
 
 func (s Set[T]) Map(f func(T) T) Set[T] {
-	result := New[T]()
+	result := NewSet[T]()
 	for item := range s {
 		_ = result.Add(f(item))
 	}

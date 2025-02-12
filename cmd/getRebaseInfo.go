@@ -2,29 +2,65 @@ package cmd
 
 import (
 	"fmt"
-
+	"github.com/jedib0t/go-pretty/text"
+	"github.com/mallardduck/ob-charts-tool/internal/upstream"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // getRebaseInfoCmd represents the getRebaseInfo command
 var getRebaseInfoCmd = &cobra.Command{
 	Use:   "getRebaseInfo",
 	Short: "Collect the basic information about a potential rebase target version",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("getRebaseInfo called")
+	Args: func(cmd *cobra.Command, args []string) error {
+		// Check if there's one argument provided
+		if len(args) == 1 {
+			return nil
+		}
+
+		return fmt.Errorf("you must provide the target upstream chart version")
 	},
+	Run: getRebaseInfoHandler,
 }
 
 func init() {
 	rootCmd.AddCommand(getRebaseInfoCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func getRebaseInfoHandler(cmd *cobra.Command, args []string) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// getRebaseInfoCmd.PersistentFlags().String("foo", "", "A help for foo")
+	fmt.Println("This command will do a series of web requests to identify information about the chart rebase.")
+	targetChartVersion := args[0]
+	fmt.Println(
+		text.AlignCenter.Apply(
+			text.Color.Sprintf(text.FgBlue, "Looking for upstream monitorin chart with version `%s`...", targetChartVersion),
+			75,
+		),
+	)
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// getRebaseInfoCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	exists := false
+	var hash string
+	if exists, hash = upstream.ChartVersionExists(targetChartVersion); !exists {
+		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", targetChartVersion)
+		fmt.Println(
+			text.AlignCenter.Apply(
+				text.Color.Sprint(text.FgRed, errorText),
+				75,
+			),
+		)
+		log.Error(errorText)
+		os.Exit(1)
+	}
+
+	rebaseRequest := upstream.PrepareRebaseRequestInfo(targetChartVersion, hash)
+	rebaseInfoState := upstream.CollectRebaseChartsInfo(rebaseRequest)
+	_ = rebaseInfoState.FindChartsContainers()
+	fmt.Println(rebaseInfoState)
+
+	rebaseInfoState.SaveStateToRebaseYaml(cwd)
 }
