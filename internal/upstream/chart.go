@@ -29,15 +29,21 @@ func PrepareRebaseRequestInfo(version string, gitHash string) rebase.StartReques
 	}
 
 	rebaseRequest.FetchChart()
+	rebaseRequest.FindAppVersion()
 	rebaseRequest.FindChartDeps()
 
 	return rebaseRequest
 }
 
+type FoundChart struct {
+	TargetCommitHash string `yaml:"commit_hash"`
+	ChartFileURL     string `yaml:"chart_file_url"`
+	AppVersion       string `yaml:"app_version"`
+}
+
 type RebaseInfo struct {
 	TargetVersion           string                   `yaml:"target_version"`
-	TargetCommitHash        string                   `yaml:"commit_hash"`
-	ChartFileURL            string                   `yaml:"chart_file_url"`
+	FoundChart              FoundChart               `yaml:"found_chart"`
 	ChartDependencies       []rebase.ChartDep        `yaml:"chart_dependencies"`
 	DependencyChartVersions []DependencyChartVersion `yaml:"dependency_chart_versions"`
 	ChartsImagesLists       map[string][]string      `yaml:"charts_images_lists"`
@@ -51,9 +57,12 @@ type DependencyChartVersion struct {
 
 func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
 	rebaseInfo := RebaseInfo{
-		TargetVersion:     request.TargetVersion,
-		TargetCommitHash:  request.TargetCommitHash,
-		ChartFileURL:      request.ChartFileURL,
+		TargetVersion: request.TargetVersion,
+		FoundChart: FoundChart{
+			TargetCommitHash: request.TargetCommitHash,
+			ChartFileURL:     request.ChartFileURL,
+			AppVersion:       request.AppVersion,
+		},
 		ChartDependencies: request.ChartDependencies,
 	}
 
@@ -104,6 +113,11 @@ func findNewestReleaseTagInfo(chartDep rebase.ChartDep) *DependencyChartVersion 
 }
 
 func (s *RebaseInfo) FindChartsContainers() error {
+	// TODO: look up main charts values file and find images from there
+	for _, item := range s.DependencyChartVersions {
+		// TODO: find each dependency chart's Chart.yaml and values.yaml file
+		fmt.Println(item.Name + "@" + item.Hash)
+	}
 	return nil
 }
 

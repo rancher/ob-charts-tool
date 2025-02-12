@@ -20,6 +20,7 @@ type StartRequest struct {
 	ChartFileURL      string
 	targetChart       []byte
 	ChartDependencies []ChartDep
+	AppVersion        string
 }
 
 func (s *StartRequest) FetchChart() {
@@ -44,6 +45,18 @@ type ChartDep struct {
 
 type Chart struct {
 	Dependencies []ChartDep `yaml:"dependencies"`
+}
+
+func (s *StartRequest) FindAppVersion() {
+	var chart struct {
+		AppVersion string `yaml:"appVersion"`
+	}
+	err := yaml.Unmarshal(s.targetChart, &chart)
+	if err != nil {
+		return
+	}
+
+	s.AppVersion = chart.AppVersion
 }
 
 func (s *StartRequest) FindChartDeps() {
