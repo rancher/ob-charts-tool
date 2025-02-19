@@ -71,7 +71,7 @@ func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
 
 	for _, item := range rebaseInfo.ChartDependencies {
 		// TODO: Fetch newest charts for each dependency
-		fmt.Println(item)
+		log.Debugf("Fetching chart dependencies for: %v", item)
 		newestTagInfo := findNewestReleaseTagInfo(item)
 		if newestTagInfo != nil {
 			rebaseInfo.DependencyChartVersions = append(rebaseInfo.DependencyChartVersions, *newestTagInfo)
