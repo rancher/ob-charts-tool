@@ -18,13 +18,14 @@ const (
 	upstreamVersionTemplate     = "kube-prometheus-stack-%s"
 )
 
-func ChartVersionExists(version string) (bool, string) {
+func ChartVersionExists(version string) (bool, string, string) {
 	return git.VerifyTagExists(upstreamPrometheusChartsURL, fmt.Sprintf(upstreamVersionTemplate, version))
 }
 
-func PrepareRebaseRequestInfo(version string, gitHash string) rebase.StartRequest {
+func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) rebase.StartRequest {
 	rebaseRequest := rebase.StartRequest{
 		TargetVersion:    version,
+		TargetTagRef:     tagRef,
 		TargetCommitHash: gitHash,
 	}
 
@@ -36,8 +37,9 @@ func PrepareRebaseRequestInfo(version string, gitHash string) rebase.StartReques
 }
 
 type FoundChart struct {
-	TargetCommitHash string `yaml:"commit_hash"`
 	ChartFileURL     string `yaml:"chart_file_url"`
+	Ref              string `yaml:"ref"`
+	TargetCommitHash string `yaml:"commit_hash"`
 	AppVersion       string `yaml:"app_version"`
 }
 
@@ -50,17 +52,18 @@ type RebaseInfo struct {
 }
 
 type DependencyChartVersion struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
-	Hash    string `yaml:"hash"`
+	Name string `yaml:"name"`
+	Ref  string `yaml:"ref"`
+	Hash string `yaml:"hash"`
 }
 
 func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
 	rebaseInfo := RebaseInfo{
 		TargetVersion: request.TargetVersion,
 		FoundChart: FoundChart{
-			TargetCommitHash: request.TargetCommitHash,
 			ChartFileURL:     request.ChartFileURL,
+			Ref:              request.TargetTagRef,
+			TargetCommitHash: request.TargetCommitHash,
 			AppVersion:       request.AppVersion,
 		},
 		ChartDependencies: request.ChartDependencies,
@@ -106,9 +109,9 @@ func findNewestReleaseTagInfo(chartDep rebase.ChartDep) *DependencyChartVersion 
 		return nil
 	}
 	return &DependencyChartVersion{
-		Name:    chartDep.Name,
-		Version: tag.Name().String(),
-		Hash:    tag.Hash().String(),
+		Name: chartDep.Name,
+		Ref:  tag.Name().String(),
+		Hash: tag.Hash().String(),
 	}
 }
 

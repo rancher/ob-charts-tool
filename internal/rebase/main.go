@@ -16,6 +16,7 @@ const (
 
 type StartRequest struct {
 	TargetVersion     string
+	TargetTagRef      string
 	TargetCommitHash  string
 	ChartFileURL      string
 	targetChart       []byte

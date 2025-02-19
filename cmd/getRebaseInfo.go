@@ -45,8 +45,9 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 	)
 
 	exists := false
+	var tagRef string
 	var hash string
-	if exists, hash = upstream.ChartVersionExists(targetChartVersion); !exists {
+	if exists, tagRef, hash = upstream.ChartVersionExists(targetChartVersion); !exists {
 		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", targetChartVersion)
 		fmt.Println(
 			text.AlignCenter.Apply(
@@ -58,7 +59,7 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	rebaseRequest := upstream.PrepareRebaseRequestInfo(targetChartVersion, hash)
+	rebaseRequest := upstream.PrepareRebaseRequestInfo(targetChartVersion, tagRef, hash)
 	rebaseInfoState := upstream.CollectRebaseChartsInfo(rebaseRequest)
 	_ = rebaseInfoState.FindChartsContainers()
 	fmt.Println(rebaseInfoState)

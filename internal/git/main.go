@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func VerifyTagExists(repo string, tag string) (bool, string) {
+func VerifyTagExists(repo string, tag string) (bool, string, string) {
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{
 		repo,
 	}})
@@ -21,10 +21,11 @@ func VerifyTagExists(repo string, tag string) (bool, string) {
 	}
 
 	// Check if the reference exists
+	expectedTagRef := "refs/tags/" + tag
 	found := false
 	var hash string
 	for _, ref := range refs {
-		if ref.Name().String() == "refs/tags/"+tag {
+		if ref.Name().String() == expectedTagRef {
 			found = true
 			hash = ref.Hash().String()
 			fmt.Printf("Found reference: %s (%s)\n", ref.Name(), ref.Hash())
@@ -32,7 +33,7 @@ func VerifyTagExists(repo string, tag string) (bool, string) {
 		}
 	}
 
-	return found, hash
+	return found, expectedTagRef, hash
 }
 
 func FindTagsMatching(repo string, tagPartial string) (bool, []*plumbing.Reference) {
