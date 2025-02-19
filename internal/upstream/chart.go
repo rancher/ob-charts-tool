@@ -37,6 +37,7 @@ func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) reb
 }
 
 type FoundChart struct {
+	Name             string `yaml:"name"`
 	ChartFileURL     string `yaml:"chart_file_url"`
 	Ref              string `yaml:"ref"`
 	TargetCommitHash string `yaml:"commit_hash"`
@@ -61,6 +62,7 @@ func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
 	rebaseInfo := RebaseInfo{
 		TargetVersion: request.TargetVersion,
 		FoundChart: FoundChart{
+			Name:             "kube-prometheus-stack",
 			ChartFileURL:     request.ChartFileURL,
 			Ref:              request.TargetTagRef,
 			TargetCommitHash: request.TargetCommitHash,
@@ -117,9 +119,11 @@ func findNewestReleaseTagInfo(chartDep rebase.ChartDep) *DependencyChartVersion 
 
 func (s *RebaseInfo) FindChartsContainers() error {
 	// TODO: look up main charts values file and find images from there
+	fmt.Println("TODO find containers for: " + s.FoundChart.Name + "@" + s.FoundChart.TargetCommitHash)
+
 	for _, item := range s.DependencyChartVersions {
 		// TODO: find each dependency chart's Chart.yaml and values.yaml file
-		fmt.Println(item.Name + "@" + item.Hash)
+		fmt.Println("TODO find containers for: " + item.Name + "@" + item.Hash)
 	}
 	return nil
 }
