@@ -2,10 +2,9 @@ package rebaseInfo
 
 import (
 	"fmt"
-	"github.com/mallardduck/ob-charts-tool/internal/rebase"
 	"os"
 
-	"github.com/mallardduck/ob-charts-tool/internal/upstream"
+	"github.com/mallardduck/ob-charts-tool/internal/rebase"
 
 	"github.com/jedib0t/go-pretty/text"
 	log "github.com/sirupsen/logrus"
@@ -15,7 +14,7 @@ func VerifyTagExists(tag string) (string, string) {
 	exists := false
 	var tagRef string
 	var hash string
-	if exists, tagRef, hash = upstream.ChartVersionExists(tag); !exists {
+	if exists, tagRef, hash = rebase.ChartVersionExists(tag); !exists {
 		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", tag)
 		fmt.Println(
 			text.AlignCenter.Apply(
@@ -30,9 +29,9 @@ func VerifyTagExists(tag string) (string, string) {
 	return tagRef, hash
 }
 
-func CollectInfo(version string, ref string, hash string) upstream.RebaseInfo {
+func CollectInfo(version string, ref string, hash string) rebase.ChartRebaseInfo {
 	rebaseRequest := rebase.PrepareRebaseRequestInfo(version, ref, hash)
-	rebaseInfoState := upstream.CollectRebaseChartsInfo(rebaseRequest)
+	rebaseInfoState := rebase.CollectRebaseChartsInfo(rebaseRequest)
 	_ = rebaseInfoState.FindChartsContainers()
 
 	return rebaseInfoState

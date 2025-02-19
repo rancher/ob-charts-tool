@@ -1,14 +1,12 @@
-package upstream
+package rebase
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/mallardduck/ob-charts-tool/internal/git"
-	"github.com/mallardduck/ob-charts-tool/internal/rebase"
-
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/mallardduck/ob-charts-tool/internal/git"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -23,39 +21,8 @@ func ChartVersionExists(version string) (bool, string, string) {
 	return git.VerifyTagExists(upstreamPrometheusChartsURL, fmt.Sprintf(upstreamVersionTemplate, version))
 }
 
-func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) rebase.StartRequest {
-	rebaseRequest := rebase.StartRequest{
-		FoundChart: rebase.FoundChart{
-			Name:       "kube-prometheus-stack",
-			Ref:        tagRef,
-			CommitHash: gitHash,
-		},
-		TargetVersion: version,
-	}
-
-	rebaseRequest.FetchChart()
-	rebaseRequest.FindAppVersion()
-	rebaseRequest.FindChartDeps()
-
-	return rebaseRequest
-}
-
-type RebaseInfo struct {
-	TargetVersion           string                   `yaml:"target_version"`
-	FoundChart              rebase.FoundChart        `yaml:"found_chart"`
-	ChartDependencies       []rebase.ChartDep        `yaml:"chart_dependencies"`
-	DependencyChartVersions []DependencyChartVersion `yaml:"dependency_chart_versions"`
-	ChartsImagesLists       map[string][]string      `yaml:"charts_images_lists"`
-}
-
-type DependencyChartVersion struct {
-	Name string `yaml:"name"`
-	Ref  string `yaml:"ref"`
-	Hash string `yaml:"hash"`
-}
-
-func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
-	rebaseInfo := RebaseInfo{
+func CollectRebaseChartsInfo(request StartRequest) ChartRebaseInfo {
+	rebaseInfo := ChartRebaseInfo{
 		TargetVersion:     request.TargetVersion,
 		FoundChart:        request.FoundChart,
 		ChartDependencies: request.ChartDependencies,
@@ -72,7 +39,7 @@ func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
 	return rebaseInfo
 }
 
-func findNewestReleaseTag(chartDep rebase.ChartDep) (bool, *plumbing.Reference) {
+func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 	version := chartDep.Version
 	if strings.Contains(version, ".*") {
 		version = strings.ReplaceAll(version, ".*", "")
@@ -94,7 +61,7 @@ func findNewestReleaseTag(chartDep rebase.ChartDep) (bool, *plumbing.Reference) 
 	return found, highestTag
 }
 
-func findNewestReleaseTagInfo(chartDep rebase.ChartDep) *DependencyChartVersion {
+func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 	exists, tag := findNewestReleaseTag(chartDep)
 	if !exists {
 		return nil
@@ -106,7 +73,7 @@ func findNewestReleaseTagInfo(chartDep rebase.ChartDep) *DependencyChartVersion 
 	}
 }
 
-func (s *RebaseInfo) FindChartsContainers() error {
+func (s *ChartRebaseInfo) FindChartsContainers() error {
 	// TODO: look up main charts values file and find images from there
 	fmt.Println("TODO find containers for: " + s.FoundChart.Name + "@" + s.FoundChart.CommitHash)
 
@@ -117,7 +84,7 @@ func (s *RebaseInfo) FindChartsContainers() error {
 	return nil
 }
 
-func (s *RebaseInfo) SaveStateToRebaseYaml(saveDir string) {
+func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) {
 	yamlData, err := yaml.Marshal(s)
 	if err != nil {
 		log.Fatalf("Error marshaling YAML: %v", err)
