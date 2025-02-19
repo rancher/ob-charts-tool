@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseInfo"
+
 	"github.com/jedib0t/go-pretty/text"
-	"github.com/mallardduck/ob-charts-tool/internal/upstream"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -44,24 +44,10 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 		),
 	)
 
-	exists := false
-	var tagRef string
-	var hash string
-	if exists, tagRef, hash = upstream.ChartVersionExists(targetChartVersion); !exists {
-		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", targetChartVersion)
-		fmt.Println(
-			text.AlignCenter.Apply(
-				text.Color.Sprint(text.FgRed, errorText),
-				75,
-			),
-		)
-		log.Error(errorText)
-		os.Exit(1)
-	}
+	// VerifyTagExists will either exit or return the tag reference and hash for a given chart version.
+	tagRef, hash := rebaseInfo.VerifyTagExists(targetChartVersion)
+	rebaseInfoState := rebaseInfo.CollectInfo(targetChartVersion, tagRef, hash)
 
-	rebaseRequest := upstream.PrepareRebaseRequestInfo(targetChartVersion, tagRef, hash)
-	rebaseInfoState := upstream.CollectRebaseChartsInfo(rebaseRequest)
-	_ = rebaseInfoState.FindChartsContainers()
 	fmt.Println(rebaseInfoState)
 
 	rebaseInfoState.SaveStateToRebaseYaml(cwd)

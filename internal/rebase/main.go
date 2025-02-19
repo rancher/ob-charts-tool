@@ -14,19 +14,41 @@ const (
 	upstreamChartURL = "https://raw.githubusercontent.com/prometheus-community/helm-charts/%s/charts/kube-prometheus-stack/Chart.yaml"
 )
 
+type FoundChart struct {
+	Name         string `yaml:"name"`
+	ChartFileURL string `yaml:"chart_file_url"`
+	Ref          string `yaml:"ref"`
+	CommitHash   string `yaml:"commit_hash"`
+	AppVersion   string `yaml:"app_version"`
+}
+
 type StartRequest struct {
+	FoundChart        FoundChart
 	TargetVersion     string
-	TargetTagRef      string
-	TargetCommitHash  string
-	ChartFileURL      string
 	targetChart       []byte
 	ChartDependencies []ChartDep
-	AppVersion        string
+}
+
+func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) StartRequest {
+	rebaseRequest := StartRequest{
+		FoundChart: FoundChart{
+			Name:       "kube-prometheus-stack",
+			Ref:        tagRef,
+			CommitHash: gitHash,
+		},
+		TargetVersion: version,
+	}
+
+	rebaseRequest.FetchChart()
+	rebaseRequest.FindAppVersion()
+	rebaseRequest.FindChartDeps()
+
+	return rebaseRequest
 }
 
 func (s *StartRequest) FetchChart() {
-	s.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.TargetCommitHash)
-	resp, err := http.Get(s.ChartFileURL)
+	s.FoundChart.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.FoundChart.CommitHash)
+	resp, err := http.Get(s.FoundChart.ChartFileURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,7 +79,7 @@ func (s *StartRequest) FindAppVersion() {
 		return
 	}
 
-	s.AppVersion = chart.AppVersion
+	s.FoundChart.AppVersion = chart.AppVersion
 }
 
 func (s *StartRequest) FindChartDeps() {

@@ -1,4 +1,4 @@
-package charts
+package chartImages
 
 import (
 	"encoding/json"
@@ -9,8 +9,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jedib0t/go-pretty/list"
 	"github.com/mallardduck/ob-charts-tool/internal/util"
+	
+	"github.com/jedib0t/go-pretty/list"
 	log "github.com/sirupsen/logrus"
 )
 

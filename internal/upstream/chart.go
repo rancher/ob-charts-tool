@@ -5,9 +5,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mallardduck/ob-charts-tool/internal/git"
 	"github.com/mallardduck/ob-charts-tool/internal/rebase"
+
+	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -24,9 +25,12 @@ func ChartVersionExists(version string) (bool, string, string) {
 
 func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) rebase.StartRequest {
 	rebaseRequest := rebase.StartRequest{
-		TargetVersion:    version,
-		TargetTagRef:     tagRef,
-		TargetCommitHash: gitHash,
+		FoundChart: rebase.FoundChart{
+			Name:       "kube-prometheus-stack",
+			Ref:        tagRef,
+			CommitHash: gitHash,
+		},
+		TargetVersion: version,
 	}
 
 	rebaseRequest.FetchChart()
@@ -36,17 +40,9 @@ func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) reb
 	return rebaseRequest
 }
 
-type FoundChart struct {
-	Name             string `yaml:"name"`
-	ChartFileURL     string `yaml:"chart_file_url"`
-	Ref              string `yaml:"ref"`
-	TargetCommitHash string `yaml:"commit_hash"`
-	AppVersion       string `yaml:"app_version"`
-}
-
 type RebaseInfo struct {
 	TargetVersion           string                   `yaml:"target_version"`
-	FoundChart              FoundChart               `yaml:"found_chart"`
+	FoundChart              rebase.FoundChart        `yaml:"found_chart"`
 	ChartDependencies       []rebase.ChartDep        `yaml:"chart_dependencies"`
 	DependencyChartVersions []DependencyChartVersion `yaml:"dependency_chart_versions"`
 	ChartsImagesLists       map[string][]string      `yaml:"charts_images_lists"`
@@ -60,19 +56,12 @@ type DependencyChartVersion struct {
 
 func CollectRebaseChartsInfo(request rebase.StartRequest) RebaseInfo {
 	rebaseInfo := RebaseInfo{
-		TargetVersion: request.TargetVersion,
-		FoundChart: FoundChart{
-			Name:             "kube-prometheus-stack",
-			ChartFileURL:     request.ChartFileURL,
-			Ref:              request.TargetTagRef,
-			TargetCommitHash: request.TargetCommitHash,
-			AppVersion:       request.AppVersion,
-		},
+		TargetVersion:     request.TargetVersion,
+		FoundChart:        request.FoundChart,
 		ChartDependencies: request.ChartDependencies,
 	}
 
 	for _, item := range rebaseInfo.ChartDependencies {
-		// TODO: Fetch newest charts for each dependency
 		log.Debugf("Fetching chart dependencies for: %v", item)
 		newestTagInfo := findNewestReleaseTagInfo(item)
 		if newestTagInfo != nil {
@@ -119,7 +108,7 @@ func findNewestReleaseTagInfo(chartDep rebase.ChartDep) *DependencyChartVersion 
 
 func (s *RebaseInfo) FindChartsContainers() error {
 	// TODO: look up main charts values file and find images from there
-	fmt.Println("TODO find containers for: " + s.FoundChart.Name + "@" + s.FoundChart.TargetCommitHash)
+	fmt.Println("TODO find containers for: " + s.FoundChart.Name + "@" + s.FoundChart.CommitHash)
 
 	for _, item := range s.DependencyChartVersions {
 		// TODO: find each dependency chart's Chart.yaml and values.yaml file
