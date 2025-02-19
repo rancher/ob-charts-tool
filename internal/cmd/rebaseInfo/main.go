@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/mallardduck/ob-charts-tool/internal/rebase"
+	"github.com/mallardduck/ob-charts-tool/internal/upstream"
 
 	"github.com/jedib0t/go-pretty/text"
 	log "github.com/sirupsen/logrus"
@@ -14,7 +15,7 @@ func VerifyTagExists(tag string) (string, string) {
 	exists := false
 	var tagRef string
 	var hash string
-	if exists, tagRef, hash = rebase.ChartVersionExists(tag); !exists {
+	if exists, tagRef, hash = upstream.PrometheusChartVersionExists(tag); !exists {
 		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", tag)
 		fmt.Println(
 			text.AlignCenter.Apply(
@@ -31,7 +32,7 @@ func VerifyTagExists(tag string) (string, string) {
 
 func CollectInfo(version string, ref string, hash string) rebase.ChartRebaseInfo {
 	rebaseRequest := rebase.PrepareRebaseRequestInfo(version, ref, hash)
-	rebaseInfoState := rebase.CollectRebaseChartsInfo(rebaseRequest)
+	rebaseInfoState := rebaseRequest.CollectRebaseChartsInfo()
 	_ = rebaseInfoState.FindChartsContainers()
 
 	return rebaseInfoState

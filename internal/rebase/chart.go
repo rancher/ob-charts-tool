@@ -2,6 +2,7 @@ package rebase
 
 import (
 	"fmt"
+	"github.com/mallardduck/ob-charts-tool/internal/upstream"
 	"os"
 	"strings"
 
@@ -10,16 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
-
-const (
-	upstreamGrafanaChartsURL    = "https://github.com/grafana/helm-charts.git"
-	upstreamPrometheusChartsURL = "https://github.com/prometheus-community/helm-charts.git"
-	upstreamVersionTemplate     = "kube-prometheus-stack-%s"
-)
-
-func ChartVersionExists(version string) (bool, string, string) {
-	return git.VerifyTagExists(upstreamPrometheusChartsURL, fmt.Sprintf(upstreamVersionTemplate, version))
-}
 
 func (s *StartRequest) CollectRebaseChartsInfo() ChartRebaseInfo {
 	rebaseInfo := ChartRebaseInfo{
@@ -57,11 +48,8 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 		version = strings.ReplaceAll(version, ".*", "")
 	}
 
-	repo := upstreamPrometheusChartsURL
+	repo := upstream.IdentifyChartUpstream(chartDep.Name)
 	tag := fmt.Sprintf("%s-%s", chartDep.Name, version)
-	if strings.Contains(chartDep.Name, "grafana") {
-		repo = upstreamGrafanaChartsURL
-	}
 
 	found, tags := git.FindTagsMatching(repo, tag)
 	if !found {
