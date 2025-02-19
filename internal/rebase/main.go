@@ -16,12 +16,12 @@ const (
 
 func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) StartRequest {
 	rebaseRequest := StartRequest{
+		TargetVersion: version,
 		FoundChart: FoundChart{
 			Name:       "kube-prometheus-stack",
 			Ref:        tagRef,
 			CommitHash: gitHash,
 		},
-		TargetVersion: version,
 	}
 
 	rebaseRequest.FetchChart()

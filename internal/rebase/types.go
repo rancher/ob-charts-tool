@@ -19,9 +19,9 @@ type FoundChart struct {
 }
 
 type StartRequest struct {
-	FoundChart        FoundChart
 	TargetVersion     string
 	targetChart       []byte
+	FoundChart        FoundChart
 	ChartDependencies []ChartDep
 }
 

@@ -21,11 +21,11 @@ func ChartVersionExists(version string) (bool, string, string) {
 	return git.VerifyTagExists(upstreamPrometheusChartsURL, fmt.Sprintf(upstreamVersionTemplate, version))
 }
 
-func CollectRebaseChartsInfo(request StartRequest) ChartRebaseInfo {
+func (s *StartRequest) CollectRebaseChartsInfo() ChartRebaseInfo {
 	rebaseInfo := ChartRebaseInfo{
-		TargetVersion:     request.TargetVersion,
-		FoundChart:        request.FoundChart,
-		ChartDependencies: request.ChartDependencies,
+		TargetVersion:     s.TargetVersion,
+		FoundChart:        s.FoundChart,
+		ChartDependencies: s.ChartDependencies,
 	}
 
 	for _, item := range rebaseInfo.ChartDependencies {
@@ -37,6 +37,18 @@ func CollectRebaseChartsInfo(request StartRequest) ChartRebaseInfo {
 	}
 
 	return rebaseInfo
+}
+
+func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
+	exists, tag := findNewestReleaseTag(chartDep)
+	if !exists {
+		return nil
+	}
+	return &DependencyChartVersion{
+		Name: chartDep.Name,
+		Ref:  tag.Name().String(),
+		Hash: tag.Hash().String(),
+	}
 }
 
 func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
@@ -59,18 +71,6 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 	highestTag := git.FindHighestVersionTag(tags, chartDep.Name)
 
 	return found, highestTag
-}
-
-func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
-	exists, tag := findNewestReleaseTag(chartDep)
-	if !exists {
-		return nil
-	}
-	return &DependencyChartVersion{
-		Name: chartDep.Name,
-		Ref:  tag.Name().String(),
-		Hash: tag.Hash().String(),
-	}
 }
 
 func (s *ChartRebaseInfo) FindChartsContainers() error {
