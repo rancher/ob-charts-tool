@@ -176,7 +176,7 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 				// Verify image version tag is set
 				if img.Tag == "" {
 					// TODO: Verify this logic works for all tags with empty values
-					log.Warnf("The image tag for '%s' is empty and will be set to appVersion (%s) value", cir.currentChartName, cir.appVersion)
+					log.Warnf("The image tag for '%s' (part of %s) is empty and will be set to appVersion (%s) value", img.Repository, cir.currentChartName, cir.appVersion)
 					img.Tag = cir.appVersion
 				}
 
