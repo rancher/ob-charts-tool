@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/mallardduck/ob-charts-tool/internal/upstream"
 	"github.com/mallardduck/ob-charts-tool/internal/util"
-	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -23,12 +21,15 @@ func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 	}
 
 	chartChartURL := upstream.GetChartsChartURL(chartDep.Name, tag.Hash().String())
+	chartVersion, appVersion := findChartVersionInfo(chartChartURL)
 
 	return &DependencyChartVersion{
-		Name:       chartDep.Name,
-		Ref:        tag.Name().String(),
-		CommitHash: tag.Hash().String(),
-		ChartURL:   chartChartURL,
+		Name:         chartDep.Name,
+		Ref:          tag.Name().String(),
+		CommitHash:   tag.Hash().String(),
+		ChartURL:     chartChartURL,
+		ChartVersion: chartVersion,
+		AppVersion:   appVersion,
 	}
 }
 
@@ -49,6 +50,20 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 	highestTag := git.FindHighestVersionTag(tags, chartDep.Name)
 
 	return found, highestTag
+}
+
+func findChartVersionInfo(chartFileURL string) (string, string) {
+	body, err := util.GetHTTPBody(chartFileURL)
+	if err != nil {
+		panic(err)
+	}
+
+	var chartMeta ChartMetaData
+	if err := yaml.Unmarshal(body, &chartMeta); err != nil {
+		panic(err)
+	}
+
+	return chartMeta.Version, chartMeta.AppVersion
 }
 
 func (s *ChartRebaseInfo) FindChartsContainers() error {

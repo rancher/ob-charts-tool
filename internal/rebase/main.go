@@ -40,6 +40,7 @@ func (s *StartRequest) FetchChart() {
 func (s *StartRequest) FindAppVersion() {
 	var chart struct {
 		AppVersion string `yaml:"appVersion"`
+		Version    string `yaml:"version"`
 	}
 	err := yaml.Unmarshal(s.targetChart, &chart)
 	if err != nil {

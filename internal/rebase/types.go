@@ -8,7 +8,13 @@ type ChartDep struct {
 	Repository string `yaml:"repository"`
 }
 
+type ChartMetaData struct {
+	Version    string `yaml:"version"`
+	AppVersion string `yaml:"appVersion"`
+}
+
 type Chart struct {
+	ChartMetaData
 	Dependencies []ChartDep `yaml:"dependencies"`
 }
 
@@ -36,10 +42,12 @@ type ChartRebaseInfo struct {
 }
 
 type DependencyChartVersion struct {
-	Name       string `yaml:"name"`
-	Ref        string `yaml:"ref"`
-	CommitHash string `yaml:"hash"`
-	ChartURL   string `yaml:"chart_url"`
+	Name         string `yaml:"name"`
+	Ref          string `yaml:"ref"`
+	CommitHash   string `yaml:"hash"`
+	ChartURL     string `yaml:"chart_url"`
+	ChartVersion string `yaml:"chart_version"`
+	AppVersion   string `yaml:"app_version"`
 }
 
 type ChartImage struct {
