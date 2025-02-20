@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseinfo"
+
 	"github.com/jedib0t/go-pretty/text"
-	"github.com/mallardduck/ob-charts-tool/internal/upstream"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -44,23 +44,15 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 		),
 	)
 
-	exists := false
-	var hash string
-	if exists, hash = upstream.ChartVersionExists(targetChartVersion); !exists {
-		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", targetChartVersion)
-		fmt.Println(
-			text.AlignCenter.Apply(
-				text.Color.Sprint(text.FgRed, errorText),
-				75,
-			),
-		)
-		log.Error(errorText)
-		os.Exit(1)
-	}
+	// VerifyTagExists will either exit or return the tag reference and hash for a given chart version.
+	tagRef, hash := rebaseinfo.VerifyTagExists(targetChartVersion)
+	rebaseInfoState := rebaseinfo.CollectInfo(targetChartVersion, tagRef, hash)
 
-	rebaseRequest := upstream.PrepareRebaseRequestInfo(targetChartVersion, hash)
-	rebaseInfoState := upstream.CollectRebaseChartsInfo(rebaseRequest)
-	_ = rebaseInfoState.FindChartsContainers()
+	/// Some of these TODOs might be better as new commands, some may live here
+	// TODO: Compare the found images for updated patch releases
+	// TODO: Compare the found images to those used in existing Rancher chart somehow
+	// TODO: Consider adding checks against "rancher/image-mirror" repo?
+
 	fmt.Println(rebaseInfoState)
 
 	rebaseInfoState.SaveStateToRebaseYaml(cwd)

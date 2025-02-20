@@ -1,16 +1,16 @@
-package charts
+package chartimages
 
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 
-	"github.com/jedib0t/go-pretty/list"
 	"github.com/mallardduck/ob-charts-tool/internal/util"
+
+	"github.com/jedib0t/go-pretty/list"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -68,21 +68,21 @@ func PrepareChartImagesList(chart string) ImageLists {
 	})
 
 	// TODO: maybe consider adding image tag check - if non use latest?
-	for item := range imagesSet.Values() {
+	for item := range imagesSet.ValuesChan() {
 		if strings.Contains(item, "{{") {
 			_ = imageListRes.NeedsManualCheck.Add(item)
 			imagesSet.Remove(item)
 		}
 	}
 
-	for item := range imagesSet.Values() {
+	for item := range imagesSet.ValuesChan() {
 		if strings.Contains(item, "rancher/") {
 			_ = imageListRes.RancherImages.Add(item)
 			imagesSet.Remove(item)
 		}
 	}
 
-	for item := range imagesSet.Values() {
+	for item := range imagesSet.ValuesChan() {
 		_ = imageListRes.NonRancherImages.Add(item)
 		imagesSet.Remove(item)
 	}
@@ -162,12 +162,7 @@ func getDockerHubToken(repo string) string {
 
 	// Construct full URL with encoded query parameters
 	fullURL := fmt.Sprintf("%s?%s", dockerTokenURL, params.Encode())
-	resp, err := http.Get(fullURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, err := util.GetHTTPBody(fullURL)
 	if err != nil {
 		log.Fatal(err)
 	}

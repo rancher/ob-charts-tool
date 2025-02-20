@@ -8,9 +8,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/mallardduck/ob-charts-tool/internal/cmd/chartimages"
+
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
-	"github.com/mallardduck/ob-charts-tool/internal/charts"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -111,12 +112,12 @@ func verifyChartImagesHandler(_ *cobra.Command, args []string) {
 }
 
 func processHelmChartImages(helmChart string) {
-	imagesLists := charts.PrepareChartImagesList(helmChart)
-	err := charts.ProcessRenderedChartImages(&imagesLists)
+	imagesLists := chartimages.PrepareChartImagesList(helmChart)
+	err := chartimages.ProcessRenderedChartImages(&imagesLists)
 	if err != nil {
 		return
 	}
-	checkedImages := charts.CheckRancherImages(imagesLists.RancherImages)
+	checkedImages := chartimages.CheckRancherImages(imagesLists.RancherImages)
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"#", "Image", "Status"})
