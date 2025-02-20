@@ -58,6 +58,7 @@ func (s *StartRequest) FindChartDeps() {
 		return
 	}
 
+	// TODO: do any of our chart dependencies have dependencies?
 	s.ChartDependencies = util.FilterSlice[ChartDep](chart.Dependencies, func(item ChartDep) bool {
 		return item.Name != "crds"
 	})
