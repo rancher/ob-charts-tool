@@ -54,5 +54,4 @@ type ChartImage struct {
 	Registry   string `yaml:"registry"`
 	Repository string `yaml:"repository"`
 	Tag        string `yaml:"tag"`
-	SHA        string `yaml:"sha"`
 }
