@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"os"
 
 	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseinfo"
@@ -53,7 +54,8 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 	// TODO: Compare the found images to those used in existing Rancher chart somehow
 	// TODO: Consider adding checks against "rancher/image-mirror" repo?
 
-	fmt.Println(rebaseInfoState)
+	log.Debug(rebaseInfoState)
+	fmt.Println("Rebase information has been collected and will be saved to `rebase.yaml` file.")
 
 	rebaseInfoState.SaveStateToRebaseYaml(cwd)
 }

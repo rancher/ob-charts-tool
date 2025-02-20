@@ -68,13 +68,11 @@ func findChartVersionInfo(chartFileURL string) (string, string) {
 }
 
 func (s *ChartRebaseInfo) FindChartsContainers() error {
-	// TODO: look up main charts values file and find images from there
-	fmt.Println("TODO find containers for: " + s.FoundChart.Name + "@" + s.FoundChart.CommitHash)
+	log.Info("Finding containers for: " + s.FoundChart.Name + "@" + s.FoundChart.CommitHash)
 	s.lookupChartImages(s.FoundChart.Name, s.FoundChart.CommitHash)
 
 	for _, item := range s.DependencyChartVersions {
-		// TODO: find each dependency chart's Chart.yaml and values.yaml file
-		fmt.Println("TODO find containers for: " + item.Name + "@" + item.CommitHash)
+		log.Info("Finding containers for: " + item.Name + "@" + item.CommitHash)
 		s.lookupChartImages(item.Name, item.CommitHash)
 	}
 	return nil
@@ -83,7 +81,7 @@ func (s *ChartRebaseInfo) FindChartsContainers() error {
 func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string) {
 	// TODO: Add output for debug and normal flows
 	valuesFileURL := upstream.GetChartValuesURL(chartName, commitHash)
-	fmt.Println(valuesFileURL)
+	log.Debugf("Fetching '%s' values file from: %s", chartName, valuesFileURL)
 
 	chartImageSet := make(util.Set[ChartImage])
 
