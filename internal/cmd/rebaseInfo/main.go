@@ -34,6 +34,11 @@ func CollectInfo(version string, ref string, hash string) rebase.ChartRebaseInfo
 	rebaseRequest := rebase.PrepareRebaseRequestInfo(version, ref, hash)
 	rebaseInfoState := rebaseRequest.CollectRebaseChartsInfo()
 	_ = rebaseInfoState.FindChartsContainers()
+	// TODO: Add something that will actually "resolve the images"
+	// This way it can output a clear list of docker images and their tags
+	// This means filling in the blanks where tags are empty (likely with appVersion)
+	// And also resolving what chart tag is the "latest" version for each chart using that as a rolling tag
+	// This way at any time our team does a rebase "latest" resolve to a specific tag for QA to test with.
 
 	return rebaseInfoState
 }

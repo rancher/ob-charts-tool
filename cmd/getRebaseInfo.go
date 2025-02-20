@@ -48,6 +48,11 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 	tagRef, hash := rebaseInfo.VerifyTagExists(targetChartVersion)
 	rebaseInfoState := rebaseInfo.CollectInfo(targetChartVersion, tagRef, hash)
 
+	/// Some of these TODOs might be better as new commands, some may live here
+	// TODO: Compare the found images for updated patch releases
+	// TODO: Compare the found images to those used in existing Rancher chart somehow
+	// TODO: Consider adding checks against "rancher/image-mirror" repo?
+
 	fmt.Println(rebaseInfoState)
 
 	rebaseInfoState.SaveStateToRebaseYaml(cwd)
