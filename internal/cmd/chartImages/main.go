@@ -3,7 +3,6 @@ package chartImages
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -163,12 +162,7 @@ func getDockerHubToken(repo string) string {
 
 	// Construct full URL with encoded query parameters
 	fullURL := fmt.Sprintf("%s?%s", dockerTokenURL, params.Encode())
-	resp, err := http.Get(fullURL)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, err := util.GetHTTPBody(fullURL)
 	if err != nil {
 		log.Fatal(err)
 	}

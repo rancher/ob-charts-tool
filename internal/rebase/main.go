@@ -2,9 +2,6 @@ package rebase
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-
 	"github.com/mallardduck/ob-charts-tool/internal/util"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -33,14 +30,9 @@ func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) Sta
 
 func (s *StartRequest) FetchChart() {
 	s.FoundChart.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.FoundChart.CommitHash)
-	resp, err := http.Get(s.FoundChart.ChartFileURL)
+	body, err := util.GetHTTPBody(s.FoundChart.ChartFileURL)
 	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	s.targetChart = body
 }

@@ -96,14 +96,9 @@ type chartImagesResolver struct {
 }
 
 func (cir *chartImagesResolver) fetchChartValues(valuesUrl string) {
-	resp, err := http.Get(valuesUrl)
+	body, err := util.GetHTTPBody(valuesUrl)
 	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	cir.chartValuesData = body
 }
