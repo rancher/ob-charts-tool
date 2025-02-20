@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	grafanaChartsURL       = "https://github.com/grafana/helm-charts.git"
-	prometheusChartsURL    = "https://github.com/prometheus-community/helm-charts.git"
-	versionTemplate        = "kube-prometheus-stack-%s"
-	promCommunityValuesURL = "https://github.com/prometheus-community/helm-charts/raw/%s/charts/%s/values.yaml"
-	grafanaValuesURL       = "https://github.com/grafana/helm-charts/raw/%s/charts/grafana/values.yaml"
+	grafanaChartsURL    = "https://github.com/grafana/helm-charts.git"
+	prometheusChartsURL = "https://github.com/prometheus-community/helm-charts.git"
+	versionTemplate     = "kube-prometheus-stack-%s"
+	promCommunityRawURL = "https://github.com/prometheus-community/helm-charts/raw/%s/charts/%s/%s.yaml"
+	grafanaRawURL       = "https://github.com/grafana/helm-charts/raw/%s/charts/%s/%s.yaml"
 )
 
 func IdentifyChartUpstream(chartName string) string {
@@ -35,9 +35,9 @@ func GetChartValuesURL(chartName string, chartHash string) string {
 	url := ""
 	switch chartName {
 	case "grafana":
-		url = fmt.Sprintf(grafanaValuesURL, chartHash)
+		url = fmt.Sprintf(grafanaRawURL, chartHash, chartName, "values")
 	default:
-		url = fmt.Sprintf(promCommunityValuesURL, chartHash, chartName)
+		url = fmt.Sprintf(promCommunityRawURL, chartHash, chartName, "values")
 	}
 
 	if url != "" {
