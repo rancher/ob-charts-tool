@@ -1,4 +1,4 @@
-package chartImages
+package chartimages
 
 import (
 	"encoding/json"

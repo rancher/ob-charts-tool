@@ -112,12 +112,12 @@ func verifyChartImagesHandler(_ *cobra.Command, args []string) {
 }
 
 func processHelmChartImages(helmChart string) {
-	imagesLists := chartImages.PrepareChartImagesList(helmChart)
-	err := chartImages.ProcessRenderedChartImages(&imagesLists)
+	imagesLists := chartimages.PrepareChartImagesList(helmChart)
+	err := chartimages.ProcessRenderedChartImages(&imagesLists)
 	if err != nil {
 		return
 	}
-	checkedImages := chartImages.CheckRancherImages(imagesLists.RancherImages)
+	checkedImages := chartimages.CheckRancherImages(imagesLists.RancherImages)
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"#", "Image", "Status"})
