@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseinfo"
 
