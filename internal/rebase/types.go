@@ -23,6 +23,7 @@ type FoundChart struct {
 	ChartFileURL string `yaml:"chart_file_url"`
 	Ref          string `yaml:"ref"`
 	CommitHash   string `yaml:"commit_hash"`
+	ChartVersion string `yaml:"chart_version"`
 	AppVersion   string `yaml:"app_version"`
 }
 

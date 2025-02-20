@@ -93,6 +93,21 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 		chartImagesList:  &chartImageSet,
 	}
 
+	if chartName == "kube-prometheus-stack" {
+		imageResolver.chartVersion = s.FoundChart.ChartVersion
+		imageResolver.appVersion = s.FoundChart.AppVersion
+	} else {
+		var chartDep DependencyChartVersion
+		for _, item := range s.DependencyChartVersions {
+			if item.Name == chartName {
+				chartDep = item
+				break
+			}
+		}
+		imageResolver.chartVersion = chartDep.ChartVersion
+		imageResolver.appVersion = chartDep.AppVersion
+	}
+
 	imageResolver.fetchChartValues(valuesFileURL)
 
 	debugImages := imageResolver.extractChartValuesImages()
@@ -105,6 +120,8 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 type chartImagesResolver struct {
 	currentChartName string
 	currentHash      string
+	chartVersion     string
+	appVersion       string
 	chartValuesURL   string
 	chartValuesData  []byte
 	chartImagesList  *util.Set[ChartImage]
@@ -155,6 +172,13 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 		if keyNode.Kind == yaml.ScalarNode && imageKeyPattern.MatchString(keyNode.Value) {
 			var img ChartImage
 			if err := valueNode.Decode(&img); err == nil {
+				// Verify image version tag is set
+				if img.Tag == "" {
+					// TODO: Verify this logic works for all tags with empty values
+					log.Warnf("The image tag for '%s' is empty and will be set to appVersion (%s) value", cir.currentChartName, cir.appVersion)
+					img.Tag = cir.appVersion
+				}
+
 				_ = cir.chartImagesList.Add(img)
 			}
 		}

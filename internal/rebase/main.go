@@ -47,6 +47,7 @@ func (s *StartRequest) FindAppVersion() {
 		return
 	}
 
+	s.FoundChart.ChartVersion = chart.Version
 	s.FoundChart.AppVersion = chart.AppVersion
 }
 
