@@ -21,10 +21,14 @@ func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 	if !exists {
 		return nil
 	}
+
+	chartChartURL := upstream.GetChartsChartURL(chartDep.Name, tag.Hash().String())
+
 	return &DependencyChartVersion{
 		Name:       chartDep.Name,
 		Ref:        tag.Name().String(),
 		CommitHash: tag.Hash().String(),
+		ChartURL:   chartChartURL,
 	}
 }
 

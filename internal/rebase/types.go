@@ -39,6 +39,7 @@ type DependencyChartVersion struct {
 	Name       string `yaml:"name"`
 	Ref        string `yaml:"ref"`
 	CommitHash string `yaml:"hash"`
+	ChartURL   string `yaml:"chart_url"`
 }
 
 type ChartImage struct {

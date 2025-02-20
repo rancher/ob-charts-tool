@@ -48,3 +48,21 @@ func GetChartValuesURL(chartName string, chartHash string) string {
 	log.Exit(1)
 	return ""
 }
+
+func GetChartsChartURL(chartName string, chartHash string) string {
+	url := ""
+	switch chartName {
+	case "grafana":
+		url = fmt.Sprintf(grafanaRawURL, chartHash, chartName, "Chart")
+	default:
+		url = fmt.Sprintf(promCommunityRawURL, chartHash, chartName, "Chart")
+	}
+
+	if url != "" {
+		return url
+	}
+
+	log.Errorf("Cannot find chart.yaml file URL for `%s`", chartName)
+	log.Exit(1)
+	return ""
+}
