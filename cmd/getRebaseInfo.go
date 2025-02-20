@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseInfo"
+	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseinfo"
 
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/spf13/cobra"
@@ -45,8 +45,8 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 	)
 
 	// VerifyTagExists will either exit or return the tag reference and hash for a given chart version.
-	tagRef, hash := rebaseInfo.VerifyTagExists(targetChartVersion)
-	rebaseInfoState := rebaseInfo.CollectInfo(targetChartVersion, tagRef, hash)
+	tagRef, hash := rebaseinfo.VerifyTagExists(targetChartVersion)
+	rebaseInfoState := rebaseinfo.CollectInfo(targetChartVersion, tagRef, hash)
 
 	/// Some of these TODOs might be better as new commands, some may live here
 	// TODO: Compare the found images for updated patch releases

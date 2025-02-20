@@ -2,9 +2,10 @@ package upstream
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/mallardduck/ob-charts-tool/internal/git"
 	log "github.com/sirupsen/logrus"
-	"strings"
 )
 
 const (

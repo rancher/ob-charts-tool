@@ -2,11 +2,12 @@ package rebase
 
 import (
 	"fmt"
-	"github.com/mallardduck/ob-charts-tool/internal/upstream"
-	"github.com/mallardduck/ob-charts-tool/internal/util"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/mallardduck/ob-charts-tool/internal/upstream"
+	"github.com/mallardduck/ob-charts-tool/internal/util"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mallardduck/ob-charts-tool/internal/git"
@@ -127,8 +128,8 @@ type chartImagesResolver struct {
 	chartImagesList  *util.Set[ChartImage]
 }
 
-func (cir *chartImagesResolver) fetchChartValues(valuesUrl string) {
-	body, err := util.GetHTTPBody(valuesUrl)
+func (cir *chartImagesResolver) fetchChartValues(valuesURL string) {
+	body, err := util.GetHTTPBody(valuesURL)
 	if err != nil {
 		panic(err)
 	}
@@ -139,7 +140,7 @@ func (cir *chartImagesResolver) extractChartValuesImages() []ChartImage {
 	var root yaml.Node
 	err := yaml.Unmarshal(cir.chartValuesData, &root)
 	if err != nil {
-		log.Fatal("error parsing values yaml: %v", err)
+		log.Fatalf("error parsing values yaml: %v", err)
 	}
 
 	cir.extractChartImages(&root)

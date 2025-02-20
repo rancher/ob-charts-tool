@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mallardduck/ob-charts-tool/internal/cmd/chartImages"
+	"github.com/mallardduck/ob-charts-tool/internal/cmd/chartimages"
 
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"

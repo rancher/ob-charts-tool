@@ -1,4 +1,4 @@
-package rebaseInfo
+package rebaseinfo
 
 import (
 	"fmt"
