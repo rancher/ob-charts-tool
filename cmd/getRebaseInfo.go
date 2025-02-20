@@ -57,5 +57,6 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 	log.Debug(rebaseInfoState)
 	fmt.Println("Rebase information has been collected and will be saved to `rebase.yaml` file.")
 
-	rebaseInfoState.SaveStateToRebaseYaml(cwd)
+	savedRebaseInfoFilePath := rebaseInfoState.SaveStateToRebaseYaml(cwd)
+	fmt.Println(fmt.Sprintf("The rebase information is saved at: %s", savedRebaseInfoFilePath))
 }

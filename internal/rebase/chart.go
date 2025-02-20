@@ -107,13 +107,15 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 		imageResolver.appVersion = chartDep.AppVersion
 	}
 
+	// When the imageResolver.extractChartValuesImages is called here, it will have updated chartImageSet values.
 	imageResolver.fetchChartValues(valuesFileURL)
-
-	debugImages := imageResolver.extractChartValuesImages()
-	fmt.Println(debugImages)
+	err := imageResolver.extractChartValuesImages()
+	if err != nil {
+		log.Error(err)
+		log.Exit(1)
+	}
+	log.Debugf("'%s' chart has found these images: %v", chartName, chartImageSet.Values())
 	s.ChartsImagesLists[chartName] = chartImageSet
-
-	fmt.Println(debugImages)
 }
 
 type chartImagesResolver struct {
@@ -134,16 +136,16 @@ func (cir *chartImagesResolver) fetchChartValues(valuesURL string) {
 	cir.chartValuesData = body
 }
 
-func (cir *chartImagesResolver) extractChartValuesImages() []ChartImage {
+func (cir *chartImagesResolver) extractChartValuesImages() error {
 	var root yaml.Node
 	err := yaml.Unmarshal(cir.chartValuesData, &root)
 	if err != nil {
-		log.Fatalf("error parsing values yaml: %v", err)
+		return fmt.Errorf("error parsing values yaml: %v", err)
 	}
 
 	cir.extractChartImages(&root)
 
-	return cir.chartImagesList.Values()
+	return nil
 }
 
 func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
@@ -187,7 +189,7 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 	}
 }
 
-func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) {
+func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) string {
 	yamlData, err := yaml.Marshal(s)
 	if err != nil {
 		log.Fatalf("Error marshaling YAML: %v", err)
@@ -197,4 +199,6 @@ func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) {
 	if err != nil {
 		log.Fatalf("Error writing YAML to file: %v", err)
 	}
+
+	return fmt.Sprintf("%s/rebase.yaml", saveDir)
 }
