@@ -3,7 +3,11 @@ package rebase
 import (
 	"fmt"
 	"github.com/mallardduck/ob-charts-tool/internal/upstream"
+	"github.com/mallardduck/ob-charts-tool/internal/util"
+	"io"
+	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing"
@@ -12,33 +16,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func (s *StartRequest) CollectRebaseChartsInfo() ChartRebaseInfo {
-	rebaseInfo := ChartRebaseInfo{
-		TargetVersion:     s.TargetVersion,
-		FoundChart:        s.FoundChart,
-		ChartDependencies: s.ChartDependencies,
-	}
-
-	for _, item := range rebaseInfo.ChartDependencies {
-		log.Debugf("Fetching chart dependencies for: %v", item)
-		newestTagInfo := findNewestReleaseTagInfo(item)
-		if newestTagInfo != nil {
-			rebaseInfo.DependencyChartVersions = append(rebaseInfo.DependencyChartVersions, *newestTagInfo)
-		}
-	}
-
-	return rebaseInfo
-}
-
 func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 	exists, tag := findNewestReleaseTag(chartDep)
 	if !exists {
 		return nil
 	}
 	return &DependencyChartVersion{
-		Name: chartDep.Name,
-		Ref:  tag.Name().String(),
-		Hash: tag.Hash().String(),
+		Name:       chartDep.Name,
+		Ref:        tag.Name().String(),
+		CommitHash: tag.Hash().String(),
 	}
 }
 
@@ -64,12 +50,104 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 func (s *ChartRebaseInfo) FindChartsContainers() error {
 	// TODO: look up main charts values file and find images from there
 	fmt.Println("TODO find containers for: " + s.FoundChart.Name + "@" + s.FoundChart.CommitHash)
+	s.lookupChartImages(s.FoundChart.Name, s.FoundChart.CommitHash)
 
 	for _, item := range s.DependencyChartVersions {
 		// TODO: find each dependency chart's Chart.yaml and values.yaml file
-		fmt.Println("TODO find containers for: " + item.Name + "@" + item.Hash)
+		fmt.Println("TODO find containers for: " + item.Name + "@" + item.CommitHash)
+		s.lookupChartImages(item.Name, item.CommitHash)
 	}
 	return nil
+}
+
+func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string) {
+	// TODO: Add output for debug and normal flows
+	valuesFileURL := upstream.GetChartValuesURL(chartName, commitHash)
+	fmt.Println(valuesFileURL)
+
+	chartImageSet := make(util.Set[ChartImage])
+
+	imageResolver := chartImagesResolver{
+		currentChartName: chartName,
+		currentHash:      commitHash,
+		chartValuesURL:   valuesFileURL,
+		chartImagesList:  &chartImageSet,
+	}
+
+	imageResolver.fetchChartValues(valuesFileURL)
+
+	debugImages := imageResolver.extractChartValuesImages()
+	fmt.Println(debugImages)
+	s.ChartsImagesLists[chartName] = chartImageSet
+
+	fmt.Println(debugImages)
+}
+
+type chartImagesResolver struct {
+	currentChartName string
+	currentHash      string
+	chartValuesURL   string
+	chartValuesData  []byte
+	chartImagesList  *util.Set[ChartImage]
+}
+
+func (cir *chartImagesResolver) fetchChartValues(valuesUrl string) {
+	resp, err := http.Get(valuesUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	cir.chartValuesData = body
+}
+
+func (cir *chartImagesResolver) extractChartValuesImages() []ChartImage {
+	var root yaml.Node
+	err := yaml.Unmarshal(cir.chartValuesData, &root)
+	if err != nil {
+		log.Fatal("error parsing values yaml: %v", err)
+	}
+
+	cir.extractChartImages(&root)
+
+	return cir.chartImagesList.Values()
+}
+
+func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
+	if node == nil {
+		return
+	}
+
+	// Handle DocumentNode by processing its content
+	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
+		cir.extractChartImages(node.Content[0])
+		return
+	}
+
+	// Process MappingNode (key-value pairs)
+	if node.Kind != yaml.MappingNode {
+		return
+	}
+
+	imageKeyPattern := regexp.MustCompile(`(?i)^(.+)?image$`)
+
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valueNode := node.Content[i+1]
+
+		if keyNode.Kind == yaml.ScalarNode && imageKeyPattern.MatchString(keyNode.Value) {
+			var img ChartImage
+			if err := valueNode.Decode(&img); err == nil {
+				_ = cir.chartImagesList.Add(img)
+			}
+		}
+
+		// Recursively process nested structures
+		cir.extractChartImages(valueNode)
+	}
 }
 
 func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) {

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/mallardduck/ob-charts-tool/internal/util"
-	
+
 	"github.com/jedib0t/go-pretty/list"
 	log "github.com/sirupsen/logrus"
 )
@@ -69,21 +69,21 @@ func PrepareChartImagesList(chart string) ImageLists {
 	})
 
 	// TODO: maybe consider adding image tag check - if non use latest?
-	for item := range imagesSet.Values() {
+	for item := range imagesSet.ValuesChan() {
 		if strings.Contains(item, "{{") {
 			_ = imageListRes.NeedsManualCheck.Add(item)
 			imagesSet.Remove(item)
 		}
 	}
 
-	for item := range imagesSet.Values() {
+	for item := range imagesSet.ValuesChan() {
 		if strings.Contains(item, "rancher/") {
 			_ = imageListRes.RancherImages.Add(item)
 			imagesSet.Remove(item)
 		}
 	}
 
-	for item := range imagesSet.Values() {
+	for item := range imagesSet.ValuesChan() {
 		_ = imageListRes.NonRancherImages.Add(item)
 		imagesSet.Remove(item)
 	}

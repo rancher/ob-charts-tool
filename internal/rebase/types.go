@@ -1,5 +1,7 @@
 package rebase
 
+import "github.com/mallardduck/ob-charts-tool/internal/util"
+
 type ChartDep struct {
 	Name       string `yaml:"name"`
 	Version    string `yaml:"version"`
@@ -26,15 +28,22 @@ type StartRequest struct {
 }
 
 type ChartRebaseInfo struct {
-	TargetVersion           string                   `yaml:"target_version"`
-	FoundChart              FoundChart               `yaml:"found_chart"`
-	ChartDependencies       []ChartDep               `yaml:"chart_dependencies"`
-	DependencyChartVersions []DependencyChartVersion `yaml:"dependency_chart_versions"`
-	ChartsImagesLists       map[string][]string      `yaml:"charts_images_lists"`
+	TargetVersion           string                          `yaml:"target_version"`
+	FoundChart              FoundChart                      `yaml:"found_chart"`
+	ChartDependencies       []ChartDep                      `yaml:"chart_dependencies"`
+	DependencyChartVersions []DependencyChartVersion        `yaml:"dependency_chart_versions"`
+	ChartsImagesLists       map[string]util.Set[ChartImage] `yaml:"charts_images_lists"`
 }
 
 type DependencyChartVersion struct {
-	Name string `yaml:"name"`
-	Ref  string `yaml:"ref"`
-	Hash string `yaml:"hash"`
+	Name       string `yaml:"name"`
+	Ref        string `yaml:"ref"`
+	CommitHash string `yaml:"hash"`
+}
+
+type ChartImage struct {
+	Registry   string `yaml:"registry"`
+	Repository string `yaml:"repository"`
+	Tag        string `yaml:"tag"`
+	SHA        string `yaml:"sha"`
 }

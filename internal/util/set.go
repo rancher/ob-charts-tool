@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -36,7 +37,7 @@ func (s Set[T]) Map(f func(T) T) Set[T] {
 	return result
 }
 
-func (s Set[T]) Values() <-chan T {
+func (s Set[T]) ValuesChan() <-chan T {
 	ch := make(chan T)
 	go func() {
 		defer close(ch)
@@ -45,6 +46,14 @@ func (s Set[T]) Values() <-chan T {
 		}
 	}()
 	return ch
+}
+
+func (s Set[T]) Values() []T {
+	result := make([]T, 0, len(s))
+	for item := range s {
+		result = append(result, item)
+	}
+	return result
 }
 
 func (s Set[T]) Size() int {
@@ -57,4 +66,12 @@ func (s Set[T]) IsEmpty() bool {
 
 func IsEmpty[T any](val T) bool {
 	return reflect.DeepEqual(val, *new(T))
+}
+
+func (s Set[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Values()) // Serialize as a slice
+}
+
+func (s Set[T]) MarshalYAML() (interface{}, error) {
+	return s.Values(), nil // Serialize as a slice
 }

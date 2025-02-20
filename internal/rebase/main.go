@@ -69,3 +69,22 @@ func (s *StartRequest) FindChartDeps() {
 	})
 	s.targetChart = nil
 }
+
+func (s *StartRequest) CollectRebaseChartsInfo() ChartRebaseInfo {
+	rebaseInfo := ChartRebaseInfo{
+		TargetVersion:     s.TargetVersion,
+		FoundChart:        s.FoundChart,
+		ChartDependencies: s.ChartDependencies,
+		ChartsImagesLists: make(map[string]util.Set[ChartImage]),
+	}
+
+	for _, item := range rebaseInfo.ChartDependencies {
+		log.Debugf("Fetching chart dependencies for: %v", item)
+		newestTagInfo := findNewestReleaseTagInfo(item)
+		if newestTagInfo != nil {
+			rebaseInfo.DependencyChartVersions = append(rebaseInfo.DependencyChartVersions, *newestTagInfo)
+		}
+	}
+
+	return rebaseInfo
+}
