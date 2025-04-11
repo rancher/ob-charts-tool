@@ -48,7 +48,7 @@ func prepareGitDashboard(currentState *chartState, tempDir string, chart types.D
 		Branch: branch,
 		Head:   plumbing.NewHash(branchHead),
 	}
-	logrus.Infof("Cloning %s to %s", chart.Source, clonePath)
+	logrus.Infof("Cloning %s to %s", chart.Repository.RepoURL, clonePath)
 	_, cloneErr := mainGit.CachedShallowCloneRepository(configParams, clonePath)
 	if cloneErr != nil {
 		return cloneErr
