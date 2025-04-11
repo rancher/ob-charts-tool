@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	debugMode    = false
 	useCache     = true
 	disableCache = false
 	cacheDir     string
@@ -21,7 +22,9 @@ var updateMonitoringMixinsCmd = &cobra.Command{
 	Use:   "updateMonitoringMixins",
 	Short: "Update all the monitoring chart mixins",
 	PreRun: func(cmd *cobra.Command, args []string) {
-		ctx := &config.AppContext{}
+		ctx := &config.AppContext{
+			DebugMode: false,
+		}
 		config.SetContext(ctx)
 	},
 	Args: func(_ *cobra.Command, args []string) error {
@@ -53,7 +56,8 @@ func init() {
 		logrus.Warnf("attempted using cached directory: %s", maybeCacheDir)
 		useCache = false
 	}
-	updateMonitoringMixinsCmd.PersistentFlags().StringVarP(&workingDir, "working-dir", "D", "", "Specify the working directory to use")
+	updateMonitoringMixinsCmd.PersistentFlags().StringVarP(&workingDir, "working-dir", "w", "", "Specify the working directory to use")
+	updateMonitoringMixinsCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "D", false, "enable debug mode")
 	rootCmd.AddCommand(updateMonitoringMixinsCmd)
 }
 
@@ -64,6 +68,7 @@ func updateMonitoringMixinsHandler(_ *cobra.Command, args []string) {
 
 	ctx := config.GetContext()
 	ctx.ChartRootDir = chartTargetRoot
+	ctx.DebugMode = debugMode
 
 	err := updatemonitoringmixins.VerifySystemDependencies()
 	if err != nil {

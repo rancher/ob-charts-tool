@@ -2,6 +2,7 @@ package config
 
 type AppContext struct {
 	ChartRootDir string
+	DebugMode    bool
 }
 
 var appCtx *AppContext

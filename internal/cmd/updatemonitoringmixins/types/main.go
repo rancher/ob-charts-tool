@@ -27,6 +27,7 @@ type HeaderData struct {
 	InitLine       string
 	MinKubeVersion string
 	MaxKubeVersion string
+	ByLine         string
 }
 
 type DashboardType int

@@ -2,6 +2,7 @@ package constants
 
 import (
 	"bytes"
+	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/config"
 	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/pythonish"
 	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/types"
 )
@@ -145,7 +146,7 @@ var AlertConditionMap = map[string]string{
 }
 
 const RuleHeader = `{{- /*
-Generated from '%(.Name)s' group from %(.URL)s by 'ob-charts-tool'
+Generated from '%(.Name)s' group from %(.URL)s%(.ByLine)s
 Do not change in-place! In order to change this file first read following link:
 https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack/hack
 */ -}}
@@ -171,6 +172,10 @@ spec:
 `
 
 func NewRuleHeader(headerData types.HeaderData) (string, error) {
+	if config.GetContext().DebugMode {
+		headerData.ByLine = ` by 'ob-charts-tool'`
+	}
+
 	templateRenderer := pythonish.NewRenderer()
 	tmpl, err := templateRenderer.Parse(RuleHeader)
 	if err != nil {
