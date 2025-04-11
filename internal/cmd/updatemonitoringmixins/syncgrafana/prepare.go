@@ -30,8 +30,8 @@ func prepareGitDashboard(currentState *chartState, tempDir string, chart types.D
 	_ = os.RemoveAll(clonePath)
 
 	branch := "main"
-	if chart.Branch != "" {
-		branch = chart.Branch
+	if chart.Repository.Branch != "" {
+		branch = chart.Repository.Branch
 	}
 	branchHead := chart.Repository.HeadSha
 	if branchHead == "" {

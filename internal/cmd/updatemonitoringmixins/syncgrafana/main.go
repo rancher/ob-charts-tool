@@ -38,9 +38,7 @@ func DashboardsSync(tempDir string) error {
 	logrus.Info("Syncing grafana dashboards")
 	chartPath := config.GetContext().ChartRootDir
 
-	// repoSHAs is equivalent to `refs` from `sync_grafana_dashboards.py` or `sync_prometheus_rules.py`
-	repoSHAs := git.RepoSHAs(constants.Repos)
-	chartsSources := constants.DashboardsSourceCharts(repoSHAs)
+	chartsSources := constants.DashboardsSourceCharts()
 	for _, chart := range chartsSources {
 		currentState := chartState{}
 		switch c := chart.(type) {

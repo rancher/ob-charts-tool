@@ -7,7 +7,7 @@ import (
 	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/types"
 )
 
-func DashboardsSourceCharts(chartRefs map[string]string) types.DashboardsConfig {
+func DashboardsSourceCharts() types.DashboardsConfig {
 	return types.DashboardsConfig{
 		types.DashboardFileSource{
 			Source: "/files/dashboards/k8s-coredns.json",
@@ -19,7 +19,7 @@ func DashboardsSourceCharts(chartRefs map[string]string) types.DashboardsConfig 
 			},
 		},
 		types.DashboardURLSource{
-			Source: fmt.Sprintf("https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/%s/manifests/grafana-dashboardDefinitions.yaml", chartRefs["kube-prometheus"]),
+			Source: fmt.Sprintf("https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/%s/manifests/grafana-dashboardDefinitions.yaml", Repos["kube-prometheus"].HeadSha),
 			DashboardSourceBase: types.DashboardSourceBase{
 				Destination:     "/templates/grafana/dashboards-1.14",
 				Type:            types.DashboardKatesYaml,
@@ -29,12 +29,9 @@ func DashboardsSourceCharts(chartRefs map[string]string) types.DashboardsConfig 
 		},
 		types.DashboardGitSource{
 			Repository: Repos["kubernetes-mixin"],
-			Branch:     chartRefs["kubernetes-mixin"],
-			// TODO: figure out how to replace these mixins from python...lol
-			// Or maybe these are rendered by something else?
-			Content: "(import 'dashboards/windows.libsonnet') + (import 'config.libsonnet') + { _config+:: { windowsExporterSelector: 'job=\"windows-exporter\"', }}",
-			Cwd:     ".",
-			Source:  "_mixin.jsonnet",
+			Content:    "(import 'dashboards/windows.libsonnet') + (import 'config.libsonnet') + { _config+:: { windowsExporterSelector: 'job=\"windows-exporter\"', }}",
+			Cwd:        ".",
+			Source:     "_mixin.jsonnet",
 			DashboardSourceBase: types.DashboardSourceBase{
 				Destination:     "/templates/grafana/dashboards-1.14",
 				MinKubernetes:   "1.14.0-0",
@@ -45,7 +42,6 @@ func DashboardsSourceCharts(chartRefs map[string]string) types.DashboardsConfig 
 		},
 		types.DashboardGitSource{
 			Repository: Repos["etcd"],
-			Branch:     chartRefs["etcd"],
 			Source:     "mixin.libsonnet",
 			Cwd:        "contrib/mixin",
 			DashboardSourceBase: types.DashboardSourceBase{

@@ -167,7 +167,6 @@ func (dus *DashboardURLSource) GetType() DashboardType {
 
 type DashboardGitSource struct {
 	Repository git.RepoConfigStatus `json:"repository,omitempty"`
-	Branch     string               `json:"branch,omitempty"`
 	Content    string               `json:"content,omitempty"`
 	Cwd        string               `json:"cwd,omitempty"`
 	Source     string               `json:"source,omitempty"` // For specific file in the repo
