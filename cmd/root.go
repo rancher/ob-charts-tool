@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/rancher/ob-charts-tool/cmd/groups"
+	"github.com/rancher/ob-charts-tool/cmd/monitoring"
 	"github.com/rancher/ob-charts-tool/internal/logging"
 	"github.com/spf13/viper"
 	"os"
@@ -35,10 +37,8 @@ Commands are either root-level (operating on multiple charts) or grouped
 under a domain prefix (e.g., 'logging:', 'monitoring:') for chart-specific actions.`,
 	Version: fmt.Sprintf("v%s (%s)", Version, GitCommit),
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// This function runs before any command's Run, RunE, PreRun, or PreRunE.
-		// It's the ideal place to initialize Viper and set up logging.
 		initConfig()
-		logging.Configure(cmd) // Now configures Logrus (via logging internal pkg)
+		logging.Configure(cmd)
 		return nil
 	},
 }
@@ -73,6 +73,10 @@ func init() {
 		logging.Log.Error(err)
 		return
 	}
+
+	// Init groups then load commands that depend on groups
+	rootCmd.AddGroup(&groups.MonitoringGroup)
+	monitoring.RegisterMonitoringSubcommands(rootCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
