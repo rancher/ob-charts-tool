@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mallardduck/ob-charts-tool/cmd"
+	"github.com/rancher/ob-charts-tool/cmd"
 )
 
 func main() {

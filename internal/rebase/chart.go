@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mallardduck/ob-charts-tool/internal/upstream"
-	"github.com/mallardduck/ob-charts-tool/internal/util"
+	"github.com/rancher/ob-charts-tool/internal/upstream"
+	"github.com/rancher/ob-charts-tool/internal/util"
 
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/mallardduck/ob-charts-tool/internal/git"
+	"github.com/rancher/ob-charts-tool/internal/git"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )

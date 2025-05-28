@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseinfo"
+	"github.com/rancher/ob-charts-tool/internal/cmd/rebaseinfo"
 
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/spf13/cobra"

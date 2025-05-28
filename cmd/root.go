@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/mallardduck/ob-charts-tool/internal/logging"
+	"github.com/rancher/ob-charts-tool/internal/logging"
 	"github.com/spf13/viper"
 	"os"
 

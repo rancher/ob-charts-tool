@@ -1,6 +1,6 @@
 package rebase
 
-import "github.com/mallardduck/ob-charts-tool/internal/util"
+import "github.com/rancher/ob-charts-tool/internal/util"
 
 type ChartDep struct {
 	Name       string `yaml:"name"`

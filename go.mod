@@ -1,4 +1,4 @@
-module github.com/mallardduck/ob-charts-tool
+module github.com/rancher/ob-charts-tool
 
 go 1.23.6
 

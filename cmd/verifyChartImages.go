@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mallardduck/ob-charts-tool/internal/cmd/chartimages"
-	"github.com/mallardduck/ob-charts-tool/internal/logging"
+	"github.com/rancher/ob-charts-tool/internal/cmd/chartimages"
+	"github.com/rancher/ob-charts-tool/internal/logging"
 
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
