@@ -25,13 +25,14 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   cliName,
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "A tool for working with `ob-team-charts`",
+	Long: `A CLI tool for working with the 'ob-team-charts' Helm chart repo.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Supports one-off tasks like inspecting chart contents (e.g., listing used images),
+as well as automating chart maintenance workflows such as rebases.
+
+Commands are either root-level (operating on multiple charts) or grouped
+under a domain prefix (e.g., 'logging:', 'monitoring:') for chart-specific actions.`,
 	Version: fmt.Sprintf("v%s (%s)", Version, GitCommit),
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// This function runs before any command's Run, RunE, PreRun, or PreRunE.
