@@ -1,19 +1,15 @@
 package verifysubchartimages
 
 import (
-	"errors"
 	"fmt"
+	"github.com/go-cmd/cmd"
 	"github.com/rancher/ob-charts-tool/internal/cmd/verifysubchartimages/static"
 	"github.com/rancher/ob-charts-tool/internal/fs"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	"io"
 	"os"
-	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 )
 
 const (
@@ -34,33 +30,59 @@ func VerifySubchartImages(workingPath, targetVersion, packageTargetRoot string) 
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
+	logrus.Info("Preparing patch now...")
+
+	// Run make patch now to finish patching
+	err = runPatchCommandGroup(workingPath, packageTargetRoot)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	logrus.Info("Cleaning git repo now...")
+
+	// Run make patch now to finish patching
+	err = runCleanCommand(workingPath, packageTargetRoot)
+	if err != nil {
+		logrus.Fatal(err)
+	}
 }
 
-func VerifySubchartImagesDynamic(workingPath, targetVersion, packageTargetRoot string) {
+// DynamicVerifySubchartImages works like VerifySubchartImages but attempts to use chart analysis to identify where to update charts
+// This is extremely EXPERIMENTAL and should NOT be used as a primary tool yet; meaning Devs can use it but the Dev is responsible for results.
+func DynamicVerifySubchartImages(workingPath, targetVersion, packageTargetRoot string) {
 	logrus.Infof("%s is clean, proceeding to `make prepare` the package", workingPath)
 	// Run make prepare to get the chart built fresh
 	err := runPrepareCommand(workingPath, packageTargetRoot)
 	if err != nil {
 		logrus.Fatal(err)
 	}
+
 	// This area is a WIP and works dynamically to find references...
-	// Find charts that refer to AppVersionHelmKey
+	// Find charts that refer to `.Chart.AppVersion` and use it with `default`
+	// As well as identifying where/what that is being used as a default for to inform what value tags to update
 	chartsPath := filepath.Join(packageTargetRoot)
 	subCharts, searchErr := fs.FindSubdirsWithStringInFile(chartsPath, AppVersionHelmKey)
 	if searchErr != nil {
 		logrus.Fatal(searchErr)
 	}
-	logrus.Infof("found %d subcharts", len(subCharts))
+	logrus.Infof("found %d subcharts that use %s with defaults", len(subCharts), AppVersionHelmKey)
 	logrus.Info(subCharts)
-	// Collect all the metadata for Charts.yaml we need from each subchart
+
+	// Collect a list of the metadata for Charts.yaml we need from each subchart
 	chartMeta := collectChartMeta(chartsPath, subCharts)
 	logrus.Infof("found %d subcharts", len(chartMeta))
 	logrus.Info(chartMeta)
+
+	//  This is where we identify what values are connected to the usages of `.Chart.AppVersion`
 	chartMetaWithRefs := collectAppVersionRefs(chartsPath, chartMeta)
 	logrus.Infof("found %d subcharts", len(chartMetaWithRefs))
 	logrus.Info(chartMetaWithRefs)
-	// Verify each subchart (these may need rules coded for each chart)
+
+	// Verify each subchart & warn about outdated value then update
 	logrus.Infof("do more")
+	// TODO: actually implement updates for dynamic mode...
+	logrus.Fatal("This is not fully implemented yet, sorry.")
 }
 
 func collectChartMeta(rootPath string, subCharts []string) []ChartMetadata {
@@ -127,76 +149,165 @@ func runPrepareCommand(workingPath, packageTargetRoot string) error {
 	packageTarget := parts[1]
 
 	// Create the command
-	chartsCommand := exec.Command(chartsToolPath, "prepare", "--useCache")
+	cmdOptions := cmd.Options{
+		Buffered:  false,
+		Streaming: true,
+	}
+	chartsCommand := cmd.NewCmdOptions(cmdOptions, chartsToolPath, "prepare", "--useCache")
 
-	// Set up a process group for interruptibility
-	// This allows sending signals to the process and its children
-	chartsCommand.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	// Setup the commands Env vars
+	// Prepare the commands Env vars
 	osEnv := os.Environ()
 	chartsCommand.Env = append(osEnv, "PACKAGE="+packageTarget)
 
-	// Create pipes for stdout/stderr to capture
-	stdoutPipe, err := chartsCommand.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("error creating stdout pipe: %w", err)
-	}
-	stderrPipe, err := chartsCommand.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("error creating stderr pipe: %w", err)
-	}
-
-	// Start the command
-	if err := chartsCommand.Start(); err != nil {
-		return fmt.Errorf("error starting command: %w", err)
-	}
-
-	// Create a channel to listen for OS signals
-	signals := make(chan os.Signal, 1)
-	// Notify the signals channel on receiving SIGINT or SIGTERM
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-
-	// Goroutine to handle signals
+	// Print STDOUT and STDERR lines streaming from Cmd
+	doneChan := make(chan struct{})
 	go func() {
-		<-signals // Wait for a signal
-		logrus.Println("Received termination signal, attempting to kill process group...")
-		// Send SIGTERM to the process group
-		// The negative PID sends the signal to the entire process group
-		if chartsCommand.Process != nil {
-			// Use a non-blocking kill in case the process has already exited
-			err := syscall.Kill(-chartsCommand.Process.Pid, syscall.SIGTERM)
-			if err != nil && !errors.Is(err, syscall.ESRCH) { // ESRCH means no such process
-				logrus.Printf("Error sending SIGTERM to process group %d: %v", -chartsCommand.Process.Pid, err)
+		defer close(doneChan)
+		for chartsCommand.Stdout != nil || chartsCommand.Stderr != nil {
+			select {
+			case line, open := <-chartsCommand.Stdout:
+				if !open {
+					chartsCommand.Stdout = nil
+					continue
+				}
+				fmt.Println(line)
+			case line, open := <-chartsCommand.Stderr:
+				if !open {
+					chartsCommand.Stderr = nil
+					continue
+				}
+				_, _ = fmt.Fprintln(os.Stderr, line)
 			}
 		}
 	}()
 
-	// Goroutine to read from stdout pipe in real-time
-	// We'll print stdout directly to os.Stdout in a Cobra CLI context
-	go func() {
-		_, err := io.Copy(os.Stdout, stdoutPipe)
-		if err != nil && err != io.EOF {
-			logrus.Printf("Error reading stdout: %v", err)
-		}
-	}()
+	// Run and wait for Cmd to return, discard Status
+	<-chartsCommand.Start()
 
-	// Goroutine to read from stderr pipe in real-time and print to console
-	// We'll print stderr directly to os.Stderr
-	go func() {
-		_, err := io.Copy(os.Stderr, stderrPipe)
-		if err != nil && err != io.EOF {
-			logrus.Printf("Error reading stderr: %v", err)
-		}
-	}()
+	// Wait for goroutine to print everything
+	<-doneChan
 
-	// Wait for the command to finish
-	err = chartsCommand.Wait()
-	if err != nil {
-		// Return the error so Cobra can handle it (e.g., print to stderr and exit)
-		return fmt.Errorf("command finished with error: %w", err)
+	logrus.Println("Chart Prepare finished successfully.")
+	return nil
+}
+
+func runPatchCommandGroup(workingPath, packageTargetRoot string) error {
+	for _, subChart := range static.MonitoringSubChartsWithPrefix() {
+		fullPackageTarget := fmt.Sprintf("%s/%s", packageTargetRoot, subChart.String())
+		err := runPatchCommand(workingPath, fullPackageTarget)
+		if err != nil {
+			logrus.Fatal(err)
+			return err
+		}
 	}
 
-	logrus.Println("Command finished successfully.")
+	return nil
+}
+
+func runPatchCommand(workingPath, packageTargetRoot string) error {
+	chartsToolPath := filepath.Join(workingPath, "bin", "charts-build-scripts")
+
+	parts := strings.Split(packageTargetRoot, "packages/")
+	if len(parts) < 2 {
+		return fmt.Errorf("packageTargetRoot must contain 'packages/'")
+	}
+	packageTarget := parts[1]
+
+	// TODO: iterate over MonitoringSubChartsWithPrefix() to call patch on each subchart
+
+	// Create the command
+	cmdOptions := cmd.Options{
+		Buffered:  false,
+		Streaming: true,
+	}
+	chartsCommand := cmd.NewCmdOptions(cmdOptions, chartsToolPath, "patch", "--useCache")
+
+	// Prepare the commands Env vars
+	osEnv := os.Environ()
+	chartsCommand.Env = append(osEnv, "PACKAGE="+packageTarget)
+
+	// Print STDOUT and STDERR lines streaming from Cmd
+	doneChan := make(chan struct{})
+	go func() {
+		defer close(doneChan)
+		for chartsCommand.Stdout != nil || chartsCommand.Stderr != nil {
+			select {
+			case line, open := <-chartsCommand.Stdout:
+				if !open {
+					chartsCommand.Stdout = nil
+					continue
+				}
+				fmt.Println(line)
+			case line, open := <-chartsCommand.Stderr:
+				if !open {
+					chartsCommand.Stderr = nil
+					continue
+				}
+				_, _ = fmt.Fprintln(os.Stderr, line)
+			}
+		}
+	}()
+
+	// Run and wait for Cmd to return, discard Status
+	<-chartsCommand.Start()
+
+	// Wait for goroutine to print everything
+	<-doneChan
+
+	logrus.Println("Chart Patch command finished successfully.")
+
+	return nil
+}
+
+func runCleanCommand(workingPath, packageTargetRoot string) error {
+	chartsToolPath := filepath.Join(workingPath, "bin", "charts-build-scripts")
+
+	parts := strings.Split(packageTargetRoot, "packages/")
+	if len(parts) < 2 {
+		return fmt.Errorf("packageTargetRoot must contain 'packages/'")
+	}
+	packageTarget := parts[1]
+
+	// Create the command
+	cmdOptions := cmd.Options{
+		Buffered:  false,
+		Streaming: true,
+	}
+	chartsCommand := cmd.NewCmdOptions(cmdOptions, chartsToolPath, "clean")
+
+	// Prepare the commands Env vars
+	osEnv := os.Environ()
+	chartsCommand.Env = append(osEnv, "PACKAGE="+packageTarget)
+
+	// Print STDOUT and STDERR lines streaming from Cmd
+	doneChan := make(chan struct{})
+	go func() {
+		defer close(doneChan)
+		for chartsCommand.Stdout != nil || chartsCommand.Stderr != nil {
+			select {
+			case line, open := <-chartsCommand.Stdout:
+				if !open {
+					chartsCommand.Stdout = nil
+					continue
+				}
+				fmt.Println(line)
+			case line, open := <-chartsCommand.Stderr:
+				if !open {
+					chartsCommand.Stderr = nil
+					continue
+				}
+				_, _ = fmt.Fprintln(os.Stderr, line)
+			}
+		}
+	}()
+
+	// Run and wait for Cmd to return, discard Status
+	<-chartsCommand.Start()
+
+	// Wait for goroutine to print everything
+	<-doneChan
+
+	logrus.Println("Charts clean finished successfully.")
+
 	return nil
 }

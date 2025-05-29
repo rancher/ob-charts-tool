@@ -25,11 +25,11 @@ type ChartMetadata struct {
 }
 
 func ProcessCharts(workingPath string) error {
-	for chart, enabled := range AppVersionEnabled {
+	for chartName, enabled := range AppVersionEnabled {
 		if !enabled {
 			continue
 		}
-		rules, ok := AppVersionRules[chart]
+		rules, ok := AppVersionRules[chartName]
 		if !ok {
 			rules = defaultRules
 		}
@@ -37,8 +37,8 @@ func ProcessCharts(workingPath string) error {
 		// TODO: in addition to static rules, we can support "manual replacements via config"
 		// Place a images.yaml in the package and we'll read that to use as values/rules...
 
-		logrus.Infof("Processing chart: %s", chart)
-		subChartPath := filepath.Join(workingPath, chart)
+		logrus.Infof("Processing chart: %s", chartName)
+		subChartPath := filepath.Join(workingPath, chartName.String())
 		if _, err := os.Stat(subChartPath); os.IsNotExist(err) {
 			continue
 		}

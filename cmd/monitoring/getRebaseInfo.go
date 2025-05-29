@@ -15,8 +15,8 @@ import (
 // getRebaseInfoCmd represents the getRebaseInfo command
 var getRebaseInfoCmd = &cobra.Command{
 	Use:     "getRebaseInfo",
-	Short:   "Collect the basic information about a potential rebase target version",
 	GroupID: groups.MonitoringGroup.ID,
+	Short:   "Collect the basic information about a potential rebase target version",
 	Args: func(_ *cobra.Command, args []string) error {
 		// Check if there's one argument provided
 		if len(args) == 1 {
