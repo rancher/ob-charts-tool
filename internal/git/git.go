@@ -11,6 +11,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func IsRepoClean(repoPath string) bool {
+	gitRepo, err := git.PlainOpen(repoPath)
+	if err != nil {
+		return false
+	}
+
+	worktree, err := gitRepo.Worktree()
+	if err != nil {
+		return false
+	}
+
+	status, err := worktree.Status()
+	if err != nil {
+		return false
+	}
+
+	return status.IsClean()
+}
+
 func VerifyTagExists(repo string, tag string) (bool, string, string) {
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{
 		repo,
