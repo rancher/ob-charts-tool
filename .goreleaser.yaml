@@ -24,7 +24,7 @@ builds:
       - windows
       - darwin
     ldflags:
-      - -X github.com/mallardduck/ob-charts-tool/cmd.Version={{.Version}} -X github.com/mallardduck/ob-charts-tool/cmd.GitCommit={{.ShortCommit}}
+      - -X github.com/rancher/ob-charts-tool/cmd.Version={{.Version}} -X github.com/rancher/ob-charts-tool/cmd.GitCommit={{.ShortCommit}}
 
 archives:
   - format: binary
@@ -40,4 +40,4 @@ changelog:
 release:
   prerelease: auto
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"

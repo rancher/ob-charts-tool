@@ -1,21 +1,22 @@
-package cmd
+package monitoring
 
 import (
 	"fmt"
 	"os"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/mallardduck/ob-charts-tool/internal/cmd/rebaseinfo"
-
 	"github.com/jedib0t/go-pretty/text"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/rancher/ob-charts-tool/cmd/groups"
+	"github.com/rancher/ob-charts-tool/internal/cmd/rebaseinfo"
 )
 
 // getRebaseInfoCmd represents the getRebaseInfo command
 var getRebaseInfoCmd = &cobra.Command{
-	Use:   "getRebaseInfo",
-	Short: "Collect the basic information about a potential rebase target version",
+	Use:     "getRebaseInfo",
+	Short:   "Collect the basic information about a potential rebase target version",
+	GroupID: groups.MonitoringGroup.ID,
 	Args: func(_ *cobra.Command, args []string) error {
 		// Check if there's one argument provided
 		if len(args) == 1 {
@@ -25,10 +26,6 @@ var getRebaseInfoCmd = &cobra.Command{
 		return fmt.Errorf("you must provide the target upstream chart version")
 	},
 	Run: getRebaseInfoHandler,
-}
-
-func init() {
-	rootCmd.AddCommand(getRebaseInfoCmd)
 }
 
 func getRebaseInfoHandler(_ *cobra.Command, args []string) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mallardduck/ob-charts-tool/internal/git"
+	"github.com/rancher/ob-charts-tool/internal/git"
 	log "github.com/sirupsen/logrus"
 )
 

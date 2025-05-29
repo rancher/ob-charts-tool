@@ -8,11 +8,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mallardduck/ob-charts-tool/internal/cmd/chartimages"
+	"github.com/rancher/ob-charts-tool/internal/cmd/chartimages"
+	"github.com/rancher/ob-charts-tool/internal/logging"
 
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -84,14 +84,14 @@ func verifyChartImagesHandler(_ *cobra.Command, args []string) {
 		} else {
 			helmArgs = fmt.Sprintf("template --debug rancher-monitoring %s -n cattle-monitoring-system", chartTargetRoot)
 		}
-		log.Debug(helmArgs)
+		logging.Log.Debug(helmArgs)
 		cmd := exec.Command("helm", strings.Split(helmArgs, " ")...)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 		err = cmd.Run()
 		if err != nil {
-			log.Error(stderr.String())
+			logging.Log.Error(stderr.String())
 			panic(err)
 		}
 
