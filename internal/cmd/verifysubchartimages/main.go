@@ -256,7 +256,7 @@ func runPatchCommand(workingPath, packageTargetRoot string) error {
 
 	logrus.Println("Chart Patch command finished successfully.")
 
-	return nil
+	return chartsCommand.Status().Error
 }
 
 func runCleanCommand(workingPath, packageTargetRoot string) error {
