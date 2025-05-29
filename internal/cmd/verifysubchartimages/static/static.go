@@ -29,26 +29,29 @@ func ProcessCharts(workingPath string) error {
 		if !enabled {
 			continue
 		}
-		rules, ok := AppVersionRules[chartName]
-		if !ok {
-			rules = defaultRules
+
+		localSubChartPath, pathErr := chartName.IdentifyLocalPath(workingPath)
+		if pathErr != nil {
+			logrus.Warn(pathErr)
+			continue
+		}
+
+		rules := defaultRules
+		if AppVersionRules.SubChartHasRules(chartName) {
+			rules = AppVersionRules.GetSubChartRules(chartName)
 		}
 
 		// TODO: in addition to static rules, we can support "manual replacements via config"
 		// Place a images.yaml in the package and we'll read that to use as values/rules...
 
 		logrus.Infof("Processing chart: %s", chartName)
-		subChartPath := filepath.Join(workingPath, chartName.String())
-		if _, err := os.Stat(subChartPath); os.IsNotExist(err) {
-			continue
-		}
-		chartInfo, err := readChartYaml(subChartPath)
+		chartInfo, err := readChartYaml(localSubChartPath)
 		if err != nil {
 			return err
 		}
 
 		// valuesYaml, err := readValuesYaml(subChartPath)
-		valuesYamlPath := filepath.Join(subChartPath, "charts", "values.yaml")
+		valuesYamlPath := filepath.Join(localSubChartPath, "charts", "values.yaml")
 
 		valuesFile, parseErr := parser.ParseFile(valuesYamlPath, parser.ParseComments)
 		if parseErr != nil {

@@ -1,5 +1,11 @@
 package static
 
+import (
+	"errors"
+	"os"
+	"path/filepath"
+)
+
 type MonitoringSubChartName string
 
 const (
@@ -12,8 +18,26 @@ const (
 	ProjectMonitoringGrafanaSubChart MonitoringSubChartName = "project-monitoring-grafana" // This is a sub-sub-chart...meaning it depends on Grafana being done first
 )
 
+func (n MonitoringSubChartName) LegacyName() MonitoringSubChartName {
+	return "rancher-" + n
+}
+
 func (n MonitoringSubChartName) String() string {
 	return string(n)
+}
+
+func (n MonitoringSubChartName) IdentifyLocalPath(workingPath string) (string, error) {
+	subChartPath := filepath.Join(workingPath, n.String())
+	if _, err := os.Stat(subChartPath); os.IsNotExist(err) {
+		subChartPath = filepath.Join(workingPath, n.LegacyName().String())
+		if _, err := os.Stat(subChartPath); os.IsNotExist(err) {
+			return "", errors.New("cannot identify correct local path for this subchart")
+		}
+
+		return subChartPath, nil
+	}
+
+	return subChartPath, nil
 }
 
 // MonitoringSubCharts lists all the subcharts for `rancher-monitoring`
@@ -32,12 +56,12 @@ func MonitoringSubCharts() []MonitoringSubChartName {
 // Notably, this prefixing is something we don't need to do and should eliminate so that's why we provide both.
 func MonitoringSubChartsWithPrefix() []MonitoringSubChartName {
 	return []MonitoringSubChartName{
-		"rancher-" + GrafanaSubChart,
-		"rancher-" + KubeStateMetricsSubChart,
-		"rancher-" + NodeExporterSubChart,
-		"rancher-" + PrometheusAdapterSubChart,
-		"rancher-" + PushProxSubChart,
-		"rancher-" + WindowsExporterSubChart,
+		GrafanaSubChart.LegacyName(),
+		KubeStateMetricsSubChart.LegacyName(),
+		NodeExporterSubChart.LegacyName(),
+		PrometheusAdapterSubChart.LegacyName(),
+		PushProxSubChart.LegacyName(),
+		WindowsExporterSubChart.LegacyName(),
 	}
 }
 
@@ -56,8 +80,12 @@ var AppVersionEnabled = map[MonitoringSubChartName]bool{
 	WindowsExporterSubChart:   true,
 }
 
-var AppVersionRules = map[MonitoringSubChartName][]AppVersionRule{
-	KubeStateMetricsSubChart: []AppVersionRule{
+type AppVersionRuleList []AppVersionRule
+
+type AppVersionRulesMap map[MonitoringSubChartName]AppVersionRuleList
+
+var AppVersionRules AppVersionRulesMap = AppVersionRulesMap{
+	KubeStateMetricsSubChart: {
 		{
 			ValuesKey:   ".Values.image.tag",
 			PrepareFunc: PrefixWithV,
@@ -67,4 +95,13 @@ var AppVersionRules = map[MonitoringSubChartName][]AppVersionRule{
 			PrepareFunc: PrefixWithV,
 		},
 	},
+}
+
+func (m AppVersionRulesMap) SubChartHasRules(subChart MonitoringSubChartName) bool {
+	_, ok := m[subChart]
+	return ok
+}
+
+func (m AppVersionRulesMap) GetSubChartRules(subChart MonitoringSubChartName) AppVersionRuleList {
+	return m[subChart]
 }
