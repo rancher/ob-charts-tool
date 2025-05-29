@@ -1,7 +1,8 @@
-package cmd
+package monitoring
 
 import (
 	"fmt"
+	"github.com/rancher/ob-charts-tool/cmd/groups"
 	"github.com/rancher/ob-charts-tool/internal/cmd/verifysubchartimages"
 	"github.com/rancher/ob-charts-tool/internal/git"
 	"os"
@@ -16,8 +17,9 @@ var workingPath string
 
 // checkSubchartImages represents the checkSubchartImages command
 var checkSubchartImages = &cobra.Command{
-	Use:   "checkSubchartImages",
-	Short: "Sanity check that values.yaml patches match expected results.",
+	Use:     "checkSubchartImages",
+	GroupID: groups.MonitoringGroup.ID,
+	Short:   "Sanity check that values.yaml patches match expected results.",
 	Long: `Using either a version as first arg, or helm chart debug output from STDIN, this command will output a list
 of the necessary images used in the chart. And then verify those are mirrored by the Rancher Image mirror.`,
 	Args: func(_ *cobra.Command, args []string) error {
@@ -40,7 +42,6 @@ func init() {
 	checkSubchartImages.Flags().StringVarP(&workingPath, "workingDir", "D", cwd, "The root working directory to `ob-team-charts` [starts as CWD]")
 	checkSubchartImages.Flags().BoolP("allow-dirty", "Q", false, "Allow the Git repo dirty check to be skipped...use with caution.")
 	checkSubchartImages.Flags().BoolP("dynamic-search", "S", false, "Use a search method instead of static rules. [EXPERIMENTAL]")
-	rootCmd.AddCommand(checkSubchartImages)
 }
 
 func checkSubchartImagesHandler(cmd *cobra.Command, args []string) {
@@ -84,7 +85,7 @@ func checkSubchartImagesHandler(cmd *cobra.Command, args []string) {
 
 	dynamicSearch, _ := cmd.Flags().GetBool("dynamic-search")
 	if dynamicSearch {
-		verifysubchartimages.VerifySubchartImagesDynamic(workingPath, targetVersion, packageTargetRoot)
+		verifysubchartimages.DynamicVerifySubchartImages(workingPath, targetVersion, packageTargetRoot)
 	} else {
 		verifysubchartimages.VerifySubchartImages(workingPath, targetVersion, packageTargetRoot)
 	}
