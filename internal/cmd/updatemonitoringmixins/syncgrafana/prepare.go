@@ -3,50 +3,63 @@ package syncgrafana
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/types"
-	mainGit "github.com/rancher/ob-charts-tool/internal/git"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
+
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/sirupsen/logrus"
+
+	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/jsonnet"
+	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/types"
+	mainGit "github.com/rancher/ob-charts-tool/internal/git"
+	"github.com/rancher/ob-charts-tool/internal/util"
 )
 
 func prepareGitDashboard(currentState *chartState, tempDir string, chart types.DashboardGitSource, chartPath string) error {
+	if chart.Source == "" {
+		chart.Source = "_mixin.jsonnet"
+	}
+
 	url := chart.Repository.RepoURL
-	logrus.Infof("Clone %s", url)
 	baseName := filepath.Base(url)
-	logrus.Infof("base %s", baseName)
 	clonePath := filepath.Join(tempDir, baseName)
-	logrus.Infof("cp %s", clonePath)
 
 	// Remove the clonePath if it exists from previous runs...
 	_ = os.RemoveAll(clonePath)
 
-	configParams := mainGit.RepoConfigParams{
-		Name: chart.Repository.Name,
-		URL:  chart.Repository.RepoURL,
-		Head: plumbing.NewHash(chart.Branch),
+	branch := "main"
+	if chart.Branch != "" {
+		branch = chart.Branch
 	}
-	_, err := mainGit.CachedShallowCloneRepository(configParams, clonePath)
-	if err != nil {
-		return err
+	branchHead := chart.Repository.HeadSha
+	if branchHead == "" {
+		var headErr error
+		branchHead, headErr = mainGit.FindBranchHeadSha(chart.Repository.RepoURL, branch)
+		if headErr != nil {
+			return headErr
+		}
+	}
+
+	configParams := mainGit.RepoConfigParams{
+		Name:   chart.Repository.Name,
+		URL:    chart.Repository.RepoURL,
+		Branch: branch,
+		Head:   plumbing.NewHash(branchHead),
+	}
+	logrus.Infof("Cloning %s to %s", chart.Source, clonePath)
+	_, cloneErr := mainGit.CachedShallowCloneRepository(configParams, clonePath)
+	if cloneErr != nil {
+		return cloneErr
 	}
 
 	mixinFile := chart.Source
 	mixinDir := fmt.Sprintf("%s/%s/", clonePath, chart.Cwd)
-	jsonnetFile := filepath.Join(mixinDir, "jsonnetfile.json")
-	if _, err := os.Stat(jsonnetFile); !os.IsNotExist(err) {
-		fmt.Println("Running jsonnet-bundler, because jsonnetfile.json exists")
-
-		cmd := exec.Command("jb", "install")
-		cmd.Dir = mixinDir // Set the working directory
-		err := cmd.Run()
-		if err != nil {
-			fmt.Printf("Error running jsonnet-bundler: %v\n", err)
-		}
+	currentState.mixinDir = mixinDir
+	jbErr := jsonnet.InitJsonnetBuilder(mixinDir)
+	if jbErr != nil {
+		return jbErr
 	}
 
 	filePath := filepath.Join(mixinDir, mixinFile)
@@ -58,19 +71,20 @@ func prepareGitDashboard(currentState *chartState, tempDir string, chart types.D
 		defer file.Close() // Ensure the file is closed when the function exits
 		_, err = file.WriteString(chart.Content)
 		if err != nil {
-			fmt.Printf("Error writing to file %s: %v\n", filePath, err)
+			logrus.Errorf("Error writing to file %s: %v\n", filePath, err)
 			return err
 		}
 	}
 
 	mixinVarsJSON, err := json.Marshal(chart.MixinVars)
 	if err != nil {
-		fmt.Printf("Error encoding mixin_vars to JSON: %v\n", err)
+		logrus.Errorf("Error encoding mixin_vars to JSON: %v\n", err)
 		return err
 	}
 
+	currentState.url = url
 	currentState.cwd = tempDir
-	currentState.rawText = fmt.Sprintf("((import \"%s\" + %s)", mixinFile, mixinVarsJSON)
+	currentState.rawText = fmt.Sprintf("((import \"%s\") + %s)", mixinFile, mixinVarsJSON)
 	currentState.source = filepath.Base(mixinFile)
 	return nil
 }
@@ -91,6 +105,8 @@ func prepareUrlDashboard(currentState *chartState, chart types.DashboardURLSourc
 	}
 
 	currentState.rawText = string(body)
+	currentState.source = chart.Source
+	currentState.url = chart.Source
 
 	return nil
 }
@@ -101,8 +117,18 @@ func prepareFileDashboard(currentState *chartState, chart types.DashboardFileSou
 	if err != nil {
 		return err
 	}
+	logrus.Infof("Generating dashboards from %s", fileSourcePath)
 
 	currentState.rawText = string(file)
-
+	currentState.source = chart.Source
+	// TODO update to relative path
+	currentState.url = chart.Source
+	relPath, err := util.GetRelativePath(
+		chart.GetDestination(),
+		fileSourcePath,
+	)
+	if err == nil {
+		currentState.url = relPath
+	}
 	return nil
 }

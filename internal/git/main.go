@@ -2,13 +2,12 @@ package git
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/rancher/ob-charts-tool/internal/util"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 func VerifyTagExists(repo string, tag string) (bool, string, string) {
@@ -87,4 +86,33 @@ func FindRepoHeadSha(repoUrl string) (string, error) {
 	}
 
 	return "", fmt.Errorf("could not resolve HEAD target %s", *headTarget)
+}
+
+func FindBranchHeadSha(repoUrl, branch string) (string, error) {
+	// Check if the branch is already a valid SHA
+	if plumbing.IsHash(branch) {
+		return branch, nil
+	}
+
+	remote := git.NewRemote(nil, &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{repoUrl},
+	})
+	refs, err := remote.List(&git.ListOptions{
+		Timeout: 30,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to list remote refs: %v", err)
+	}
+
+	branchRef := plumbing.NewBranchReferenceName(branch)
+
+	for _, ref := range refs {
+		refName := ref.Name()
+		if refName == branchRef {
+			return ref.Hash().String(), nil
+		}
+	}
+
+	return "", fmt.Errorf("branch %s not found in remote", branch)
 }

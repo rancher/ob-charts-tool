@@ -8,16 +8,39 @@ import (
 	"path/filepath"
 )
 
+type DashboardReplacementRule struct {
+	Match       string
+	Replacement string
+}
+
+type RuleReplacementRule struct {
+	Match       string
+	Replacement string
+	LimitGroup  []string
+	Init        string
+}
+
+type HeaderData struct {
+	Name           string
+	URL            string
+	Condition      string
+	InitLine       string
+	MinKubeVersion string
+	MaxKubeVersion string
+}
+
 type DashboardType int
 
 const (
 	DashboardJson DashboardType = iota
 	DashboardYaml
+	DashboardKatesYaml
 	DashboardJsonnetMixin
 )
 
 var dashboardTypeName = map[DashboardType]string{
 	DashboardJson:         "dashboard_json",
+	DashboardKatesYaml:    "yaml",
 	DashboardYaml:         "yaml",
 	DashboardJsonnetMixin: "jsonnet_mixin",
 }
@@ -52,6 +75,12 @@ func (dt *DashboardType) UnmarshalJSON(b []byte) error {
 func (dt *DashboardType) MarshalJSON() ([]byte, error) {
 	s := dt.String()
 	return json.Marshal(s)
+}
+
+type KatesVersions interface {
+	GetMinKubernetes() string
+	GetMaxKubernetes() string
+	SetMaxKubernetes(string)
 }
 
 type DashboardSource interface {
@@ -170,5 +199,34 @@ func (dgs *DashboardGitSource) GetType() DashboardType {
 	return dgs.DashboardSourceBase.Type
 }
 
-// DashboardConfig is a slice that can hold any of the specific dashboard source types.
-type DashboardConfig []interface{}
+// DashboardsConfig is a slice that can hold any of the specific dashboard source types.
+type DashboardsConfig []interface{}
+
+type RulesGitSource struct {
+	Repository    git.RepoConfigStatus `json:"repository"`
+	Source        string               `json:"source,omitempty"`
+	Cwd           string               `json:"cwd,omitempty"`
+	Destination   string               `json:"destination,omitempty"`
+	MinKubernetes string               `json:"min_kubernetes,omitempty"`
+	MaxKubernetes string               `json:"max_kubernetes,omitempty"`
+	Mixin         string               `json:"mixin,omitempty"`
+}
+
+func (r *RulesGitSource) GetMinKubernetes() string {
+	return r.MinKubernetes
+}
+
+func (r *RulesGitSource) GetMaxKubernetes() string {
+	return r.MaxKubernetes
+}
+
+func (r *RulesGitSource) SetMaxKubernetes(s string) {
+	r.MaxKubernetes = s
+}
+
+func (r *RulesGitSource) GetDestination() string {
+	chartBaseDir := config.GetContext().ChartRootDir
+	return filepath.Join(chartBaseDir, r.Destination)
+}
+
+type RulesConfig []RulesGitSource

@@ -1,8 +1,9 @@
 package syncgrafana
 
 type chartState struct {
-	cwd     string
-	rawText string
-	source  string
-	url     string
+	cwd      string
+	mixinDir string
+	rawText  string
+	source   string
+	url      string
 }

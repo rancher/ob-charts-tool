@@ -7,9 +7,10 @@ import (
 )
 
 type RepoConfigParams struct {
-	Name string
-	URL  string
-	Head plumbing.Hash
+	Name   string
+	URL    string
+	Branch string
+	Head   plumbing.Hash
 }
 
 func ShallowCloneRepository(repoConfig RepoConfigParams, destinationDir string) (plumbing.Hash, error) {

@@ -18,34 +18,36 @@ func (l LiteralStr) MarshalYAML() (interface{}, error) {
 	}, nil
 }
 
-func YamlStrRepr(v interface{}, indent int) (string, error) {
+func YamlStrRepr(v interface{}, indent int, escape bool) (string, error) {
 	var b strings.Builder
 	encoder := yaml.NewEncoder(&b)
-	encoder.SetIndent(2)
+	encoder.SetIndent(indent)
 	err := encoder.Encode(v)
 	if err != nil {
 		return "", err
 	}
 
 	yamlStr := b.String()
-	// Indent the YAML string by the specified amount
-	// This emulates the textwrap.indent in Python
-	lines := strings.Split(yamlStr, "\n")
-	for i, line := range lines {
-		if line != "" || i < len(lines)-1 { // Only indent non-empty lines or not the very last line
-			lines[i] = strings.Repeat(" ", indent) + line
-		}
+	if escape {
+		yamlStr = escapeHelm(yamlStr)
 	}
 
-	// Join the lines back into a single string
-	return strings.Join(lines, "\n"), nil
+	return yamlStr, nil
 }
 
-func SetDefaultMaxK8s(ds types.DashboardSource) types.DashboardSource {
-	if ds.GetMaxKubernetes() == "" {
+func escapeHelm(s string) string {
+	s = strings.ReplaceAll(s, "{{", "{{`{{")
+	s = strings.ReplaceAll(s, "}}", "}}`}}")
+	s = strings.ReplaceAll(s, "{{`{{", "{{`{{`}}")
+	s = strings.ReplaceAll(s, "}}`}}", "{{`}}`}}")
+	return s
+}
+
+func SetDefaultMaxK8s(kv types.KatesVersions) types.KatesVersions {
+	if kv.GetMaxKubernetes() == "" {
 		// Equal to: https://github.com/prometheus-community/helm-charts/blob/0b60795bb66a21cd368b657f0665d67de3e49da9/charts/kube-prometheus-stack/hack/sync_grafana_dashboards.py#L326
-		ds.SetMaxKubernetes("9.9.9-9")
+		kv.SetMaxKubernetes("9.9.9-9")
 	}
 
-	return ds
+	return kv
 }

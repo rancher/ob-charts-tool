@@ -3,32 +3,12 @@ package constants
 import (
 	"bytes"
 	"fmt"
-	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/git"
 	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/pythonish"
 	"github.com/rancher/ob-charts-tool/internal/cmd/updatemonitoringmixins/types"
 )
 
-var Repos = map[string]git.RepoConfigStatus{
-	"kube-prometheus": {
-		Name:    "kube-prometheus",
-		RepoURL: "https://github.com/prometheus-operator/kube-prometheus.git",
-		HeadSha: "685008710cbb881cd8fce9db1e2f890c9e249903",
-	},
-	"kubernetes-mixin": {
-		Name:    "kubernetes-mixin",
-		RepoURL: "https://github.com/kubernetes-monitoring/kubernetes-mixin.git",
-		HeadSha: "834daaa30905d5832c68b7ef8ab41fbedcd9dd4b",
-	},
-	"etcd": {
-		Name:    "etcd",
-		RepoURL: "https://github.com/etcd-io/etcd.git",
-		HeadSha: "7351ab86c054aad7d31d6639b2e841f2c37cd296",
-	},
-	// TODO: in the future we'll maybe add a Rancher source
-}
-
-func SourceCharts(chartRefs map[string]string) types.DashboardConfig {
-	return types.DashboardConfig{
+func DashboardsSourceCharts(chartRefs map[string]string) types.DashboardsConfig {
+	return types.DashboardsConfig{
 		types.DashboardFileSource{
 			Source: "/files/dashboards/k8s-coredns.json",
 			DashboardSourceBase: types.DashboardSourceBase{
@@ -42,7 +22,7 @@ func SourceCharts(chartRefs map[string]string) types.DashboardConfig {
 			Source: fmt.Sprintf("https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/%s/manifests/grafana-dashboardDefinitions.yaml", chartRefs["kube-prometheus"]),
 			DashboardSourceBase: types.DashboardSourceBase{
 				Destination:     "/templates/grafana/dashboards-1.14",
-				Type:            types.DashboardYaml,
+				Type:            types.DashboardKatesYaml,
 				MinKubernetes:   "1.14.0-0",
 				MulticlusterKey: ".Values.grafana.sidecar.dashboards.multicluster.global.enabled",
 			},
@@ -81,7 +61,7 @@ func SourceCharts(chartRefs map[string]string) types.DashboardConfig {
 	}
 }
 
-var ConditionMap = map[string]string{
+var DashboardsConditionMap = map[string]string{
 	"alertmanager-overview":           " (or .Values.alertmanager.enabled .Values.alertmanager.forceDeployDashboards)",
 	"grafana-coredns-k8s":             " .Values.coreDns.enabled",
 	"etcd":                            " .Values.kubeEtcd.enabled",
@@ -104,8 +84,8 @@ var ConditionMap = map[string]string{
 	"k8s-resources-windows-pod":       " .Values.windowsMonitoring.enabled",
 }
 
-const StandardHeader = `{{- /*
-Generated from '%(.Name)s' from ..%(.URL)s by 'ob-charts-tool'
+const DashboardHeader = `{{- /*
+Generated from '%(.Name)s' from %(.URL)s by 'ob-charts-tool'
 Do not change in-place! In order to change this file first read following link:
 https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack/hack
 */ -}}
@@ -127,17 +107,9 @@ metadata:
 data:
 `
 
-type HeaderData struct {
-	Name           string
-	URL            string
-	Condition      any
-	MinKubeVersion string
-	MaxKubeVersion string
-}
-
-func NewHeader(headerData HeaderData) (string, error) {
+func NewDashboardHeader(headerData types.HeaderData) (string, error) {
 	templateRenderer := pythonish.NewRenderer()
-	tmpl, err := templateRenderer.Parse(StandardHeader)
+	tmpl, err := templateRenderer.Parse(DashboardHeader)
 	if err != nil {
 		return "ERROR", err
 	}
