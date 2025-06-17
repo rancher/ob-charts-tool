@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"github.com/rancher/ob-charts-tool/internal/charts"
 	"io"
 	"os"
 	"os/exec"
@@ -69,7 +70,7 @@ func verifyChartImagesHandler(_ *cobra.Command, args []string) {
 			panic(err)
 		}
 
-		chartTargetRoot := fmt.Sprintf("%s/charts/rancher-monitoring/%s", cwd, targetVersion)
+		chartTargetRoot := charts.BaseMonitoringVersionDir(cwd, targetVersion)
 		if _, err := os.Stat(chartTargetRoot); os.IsNotExist(err) {
 			panic(fmt.Sprintf("Cannot find a monitoring chart with the provided version (%s)", targetVersion))
 		}
