@@ -40,10 +40,10 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 		version = strings.ReplaceAll(version, ".*", "")
 	}
 
-	repo := upstream.IdentifyChartUpstream(chartDep.Name)
+	repoUrl := upstream.IdentifyChartUpstream(chartDep.Name)
 	tag := fmt.Sprintf("%s-%s", chartDep.Name, version)
 
-	found, tags := git.FindTagsMatching(repo, tag)
+	found, tags := git.FindTagsMatching(repoUrl, tag)
 	if !found {
 		panic("Could not find any tags for this chart")
 	}
