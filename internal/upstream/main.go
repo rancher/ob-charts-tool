@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rancher/ob-charts-tool/internal/git"
+	gitremote "github.com/rancher/ob-charts-tool/internal/git/remote"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,7 +29,7 @@ func GetKubePrometheusVersionTag(versionNumber string) string {
 }
 
 func PrometheusChartVersionExists(version string) (bool, string, string) {
-	return git.VerifyTagExists(prometheusChartsURL, GetKubePrometheusVersionTag(version))
+	return gitremote.VerifyTagExists(prometheusChartsURL, GetKubePrometheusVersionTag(version))
 }
 
 func GetChartValuesURL(chartName string, chartHash string) string {

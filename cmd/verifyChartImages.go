@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	helpers "github.com/rancher/ob-charts-tool/internal/cmd"
 	"github.com/rancher/ob-charts-tool/internal/cmd/chartimages"
 	"github.com/rancher/ob-charts-tool/internal/logging"
 
@@ -29,7 +30,7 @@ of the necessary images used in the chart. And then verify those are mirrored by
 		}
 
 		// Check if there is data coming from stdin
-		if isDataFromStdin() {
+		if helpers.IsDataFromStdin() {
 			return nil
 		}
 
@@ -40,17 +41,6 @@ of the necessary images used in the chart. And then verify those are mirrored by
 
 func init() {
 	rootCmd.AddCommand(verifyChartImagesCmd)
-}
-
-// Helper function to determine if there's data from stdin
-func isDataFromStdin() bool {
-	info, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-
-	// Check if stdin is not a terminal and there is data to read
-	return info.Mode()&os.ModeCharDevice == 0
 }
 
 func verifyChartImagesHandler(_ *cobra.Command, args []string) {
@@ -97,7 +87,7 @@ func verifyChartImagesHandler(_ *cobra.Command, args []string) {
 
 		data = stdout.Bytes()
 
-	} else if isDataFromStdin() {
+	} else if helpers.IsDataFromStdin() {
 		// Read stdin data
 		data, err = io.ReadAll(os.Stdin)
 		if err != nil {

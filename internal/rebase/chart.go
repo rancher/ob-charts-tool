@@ -6,11 +6,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/rancher/ob-charts-tool/internal/git"
+	gitremote "github.com/rancher/ob-charts-tool/internal/git/remote"
 	"github.com/rancher/ob-charts-tool/internal/upstream"
 	"github.com/rancher/ob-charts-tool/internal/util"
 
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/rancher/ob-charts-tool/internal/git"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -43,7 +44,7 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 	repo := upstream.IdentifyChartUpstream(chartDep.Name)
 	tag := fmt.Sprintf("%s-%s", chartDep.Name, version)
 
-	found, tags := git.FindTagsMatching(repo, tag)
+	found, tags := gitremote.FindTagsMatching(repo, tag)
 	if !found {
 		panic("Could not find any tags for this chart")
 	}
