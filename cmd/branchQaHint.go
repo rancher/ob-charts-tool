@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -16,17 +17,17 @@ var branchQaHintCmd = &cobra.Command{
 	Use:   "branchQaHint",
 	Short: "Provide the QA testing template for the active branch",
 	Args: func(_ *cobra.Command, args []string) error {
-		// Check if there's one argument provided
-		if len(args) == 1 {
+		// Check that there is either one or zero args
+		if len(args) == 1 || len(args) == 0 {
 			return nil
 		}
 
 		// Check if there is data coming from stdin
 		if helpers.IsDataFromStdin() {
-			return nil
+			return errors.New("does not accept input from stdin")
 		}
 
-		return fmt.Errorf("you must provide either one argument or input from stdin")
+		return errors.New("you must provide either 0 or 1 arguments")
 	},
 	Run: branchQaHintHandler,
 }
@@ -36,15 +37,20 @@ func init() {
 }
 
 func branchQaHintHandler(_ *cobra.Command, args []string) {
-	var cwd string
+	var repoPath string
 	var err error
 
-	if cwd, err = os.Getwd(); err != nil {
-		log.Log.Fatal(err)
+	if len(args) > 0 {
+		repoPath = args[0]
+	} else {
+		repoPath, err = os.Getwd()
+		if err != nil {
+			log.Log.Fatal(err)
+		}
 	}
 
 	var branchQaHints string
-	branchQaHints, err = branchhints.PrepareBranchHints(cwd)
+	branchQaHints, err = branchhints.PrepareBranchHints(repoPath)
 	if err != nil {
 		log.Log.Fatal(err)
 	}
