@@ -3,7 +3,7 @@ module github.com/rancher/ob-charts-tool
 go 1.23.6
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/sirupsen/logrus v1.9.3
