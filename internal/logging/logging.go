@@ -1,10 +1,11 @@
 package logging
 
 import (
+	"os"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 )
 
 // Log is the global Logrus logger instance for the application.
