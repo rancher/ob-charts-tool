@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+source $(dirname $0)/version
+
+cd $(dirname $0)/..
+
+echo "Starting bin build for ob-charts-tool"
+
+mkdir -p bin
+if [ "$(uname)" = "Linux" ]; then
+    OTHER_LINKFLAGS="-extldflags -static -s -w"
+fi
+
+LINKFLAGS="-X github.com/rancher/ob-charts-tool/cmd.Version=$VERSION"
+LINKFLAGS="-X github.com/rancher/ob-charts-tool/cmd.GitCommit=$COMMIT $LINKFLAGS"
+LINKFLAGS="-X github.com/rancher/ob-charts-tool/cmd.Date=$(date -u +"%Y-%m-%dT%H:%M:%SZ") $LINKFLAGS"
+
+CGO_ENABLED=0 go build -ldflags "$LINKFLAGS $OTHER_LINKFLAGS" -o "bin/ob-charts-tool" ./main.go
+
+echo "Done"
