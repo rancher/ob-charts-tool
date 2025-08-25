@@ -1,4 +1,4 @@
-package git
+package remote
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func VerifyTagExists(repo string, tag string) (bool, string, string) {
+func VerifyTagExists(repoURL string, tag string) (bool, string, string) {
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{
-		repo,
+		repoURL,
 	}})
 	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
@@ -36,9 +36,9 @@ func VerifyTagExists(repo string, tag string) (bool, string, string) {
 	return found, expectedTagRef, hash
 }
 
-func FindTagsMatching(repo string, tagPartial string) (bool, []*plumbing.Reference) {
+func FindTagsMatching(repoURL string, tagPartial string) (bool, []*plumbing.Reference) {
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{
-		repo,
+		repoURL,
 	}})
 	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
