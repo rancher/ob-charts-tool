@@ -34,42 +34,35 @@ func FindLocalRepoBranchAndRemote(dir string) (*RepoQAHintInfo, error) {
 		return nil, err
 	}
 
-	var remoteName, remoteBranchUrl string
+	var remoteName, remoteBranchURL string
 	if IsCurrentBranchLocalOnly(repo) {
 		log.Log.Debug("remote branch url is empty; will try to guess based on default remote")
-		defaultRemoteInfo, err := FindRepoDefaultRemoteUrl(repo)
+		defaultRemoteInfo, err := FindRepoDefaultRemoteURL(repo)
 		// TODO maybe add CLI flag for strict error mode and error instaed?
 		if err != nil {
 			log.Log.Warnf("current branch is local only, not finding remote branch")
-			remoteBranchUrl = "<UNKNOWN>"
+			remoteBranchURL = "<UNKNOWN>"
 			remoteName = "<UNKNOWN>"
 		} else {
-			remoteBranchUrl = defaultRemoteInfo.URL
+			remoteBranchURL = defaultRemoteInfo.URL
 			// TODO: if the name is too generic (origin/etc) we should extract from URL
 			// We need a name here that is "unique" in context of developer the change comes from
 			remoteName = defaultRemoteInfo.Name
 		}
 	} else {
-		remoteBranchRef, err := FindRepoRemoteBranchURL(repo, branchName)
-		if err != nil {
-			log.Log.Warn(err)
-			return nil, err
-		}
-
-		remoteBranchUrl = remoteBranchRef.URL
-		remoteName = remoteBranchRef.Name
+		log.Log.Panicf("TODO: implement this to find Remote branch")
 	}
 
-	if strings.Contains(remoteBranchUrl, "git@") {
-		parts := strings.Split(remoteBranchUrl, ":")
+	if strings.Contains(remoteBranchURL, "git@") {
+		parts := strings.Split(remoteBranchURL, ":")
 		repoName := parts[1]
 		repoName = repoName[:len(repoName)-4]
 		// Transform the Git URL to an HTTP URL
-		remoteBranchUrl = fmt.Sprintf("https://github.com/%s", repoName)
+		remoteBranchURL = fmt.Sprintf("https://github.com/%s", repoName)
 	}
 
 	if remoteName == "origin" {
-		githubRepoName := strings.SplitAfter(remoteBranchUrl, "github.com/")
+		githubRepoName := strings.SplitAfter(remoteBranchURL, "github.com/")
 		repoParts := strings.Split(githubRepoName[1], "/")
 		remoteName = repoParts[0]
 	}
@@ -78,7 +71,7 @@ func FindLocalRepoBranchAndRemote(dir string) (*RepoQAHintInfo, error) {
 		Path:           dir,
 		CurrentBranch:  branchName,
 		RemoteRepoName: remoteName,
-		RemoteRepoURL:  remoteBranchUrl,
+		RemoteRepoURL:  remoteBranchURL,
 	}, nil
 }
 
@@ -149,14 +142,6 @@ type RemoteRef struct {
 	URL  string
 }
 
-// FindRepoRemoteBranchURL will return the current branch (if on one) remote repo URL
-func FindRepoRemoteBranchURL(repo *git.Repository, branch string) (*RemoteRef, error) {
-	config, err := repo.Config()
-	fmt.Println(config, err)
-
-	return nil, err
-}
-
 func FindRepoDefaultRemoteName(repo *git.Repository) (string, error) {
 	headRef, err := repo.Head()
 	if err != nil {
@@ -176,8 +161,8 @@ func FindRepoDefaultRemoteName(repo *git.Repository) (string, error) {
 	return remoteName, nil
 }
 
-// FindRepoDefaultRemoteUrl will find the default (origin) remote repo's URL
-func FindRepoDefaultRemoteUrl(repo *git.Repository) (*RemoteRef, error) {
+// FindRepoDefaultRemoteURL will find the default (origin) remote repo's URL
+func FindRepoDefaultRemoteURL(repo *git.Repository) (*RemoteRef, error) {
 	defaultRemoteName, err := FindRepoDefaultRemoteName(repo)
 	if err != nil {
 		return nil, err

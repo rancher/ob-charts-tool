@@ -8,8 +8,6 @@ import (
 )
 
 const (
-	UpstreamUrl         = "https://github.com/rancher/ob-team-charts"
-	BaseRepoUrl         = "https://github.com/%s/ob-team-charts"
 	ClusterRepoName     = "%s-%s" // Where 1st %s is "repo org/owner" (or ob-team-charts if rancher), and 2nd %s is "branch name"
 	ClusterRepoTemplate = `apiVersion: catalog.cattle.io/v1
 kind: ClusterRepo
