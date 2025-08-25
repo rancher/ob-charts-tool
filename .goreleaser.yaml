@@ -24,7 +24,7 @@ builds:
       - windows
       - darwin
     ldflags:
-      - -X github.com/rancher/ob-charts-tool/cmd.Version={{.Version}} -X github.com/rancher/ob-charts-tool/cmd.GitCommit={{.ShortCommit}}
+      - -X github.com/rancher/ob-charts-tool/cmd.Version={{.Version}} -X github.com/rancher/ob-charts-tool/cmd.GitCommit={{.ShortCommit}} -X github.com/rancher/ob-charts-tool/cmd.Date={{.Date}}
 
 archives:
   - format: binary
