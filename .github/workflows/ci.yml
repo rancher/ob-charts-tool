@@ -1,4 +1,4 @@
-name: Rancher `scc-operator` CI
+name: Team ORBS Chart Tools CI
 
 on:
   workflow_call:
