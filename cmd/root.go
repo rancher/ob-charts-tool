@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/rancher/ob-charts-tool/cmd/groups"
 	"github.com/rancher/ob-charts-tool/cmd/monitoring"
 	"github.com/rancher/ob-charts-tool/internal/logging"
-	"github.com/spf13/viper"
-	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const cliName = "ob-charts-tool"
@@ -36,7 +37,7 @@ as well as automating chart maintenance workflows such as rebases.
 Commands are either root-level (operating on multiple charts) or grouped
 under a domain prefix (e.g., 'logging:', 'monitoring:') for chart-specific actions.`,
 	Version: fmt.Sprintf("v%s (%s)", Version, GitCommit),
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		initConfig()
 		logging.Configure(cmd)
 		return nil

@@ -26,7 +26,8 @@
       "paths": [
         "third_party$",
         "builtin$",
-        "examples$"
+        "examples$",
+        "internal/util"
       ],
       "presets": [
         "comments",
