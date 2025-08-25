@@ -19,6 +19,8 @@ var (
 	Version = "v0.0.0-dev"
 	// GitCommit represents the latest commit when building this script
 	GitCommit = "HEAD"
+	// Date represents the build timestamp
+	Date = "now"
 )
 
 var (
@@ -36,7 +38,7 @@ as well as automating chart maintenance workflows such as rebases.
 
 Commands are either root-level (operating on multiple charts) or grouped
 under a domain prefix (e.g., 'logging:', 'monitoring:') for chart-specific actions.`,
-	Version: fmt.Sprintf("v%s (%s)", Version, GitCommit),
+	Version: fmt.Sprintf("v%s (%s) Built at %s", Version, GitCommit, Date),
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		initConfig()
 		logging.Configure(cmd)
