@@ -2,7 +2,7 @@ module github.com/rancher/ob-charts-tool
 
 go 1.24.0
 
-toolchain go1.24.2
+toolchain go1.25.5
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
