@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/go-git/go-git/v5 v5.16.3
+	github.com/go-git/go-git/v5 v5.16.4
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.10.2
