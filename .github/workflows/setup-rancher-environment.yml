@@ -1,0 +1,136 @@
+name: Test new monitoring version
+
+on:
+  workflow_dispatch:
+    inputs:
+      k3s_version:
+        description: 'The k3s version to install (e.g., v1.31.2+k3s1)'
+        required: true
+      rancher_version:
+        description: 'The Rancher version to install (e.g., 2.12.1)'
+        required: true
+      chart_version:
+        description: 'The target chart version to test (e.g., 107.2.0+up69.8.2-rancher.20)'
+        required: true
+
+jobs:
+  test-monitoring:
+    runs-on: ubuntu-latest
+    outputs:
+      rancher_token: ${{ steps.create-token.outputs.token }}
+      rancher_url: ${{ steps.get-rancher-url.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Build ob-charts-tool
+        run: go build -o ob-charts-tool main.go
+
+      - name: Install k3s
+        run: |
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${{ github.event.inputs.k3s_version }} sh -
+          sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+          mkdir -p $HOME/.kube
+          sudo cp /etc/rancher/k3s/k3s.yaml $HOME/.kube/config
+          sudo chown $(id -u):$(id -g) $HOME/.kube/config
+          echo "Waiting for k3s node to be ready..."
+          kubectl wait --for=condition=Ready node --all --timeout=300s
+          echo "k3s is ready."
+
+      - name: Install cert-manager
+        run: |
+          helm repo add jetstack https://charts.jetstack.io
+          helm install cert-manager jetstack/cert-manager --namespace cert-manager     --version v1.13.0    --set installCRDs=true --wait --create-namespace 
+          echo "cert-manager is ready."
+
+      - name: Get Node IP and set Rancher URL
+        id: get-rancher-url
+        run: |
+          NODE_IP=$(kubectl get node -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+          RANCHER_URL="https://rancher.$NODE_IP.sslip.io"
+          echo "Rancher URL will be: $RANCHER_URL"
+          echo "url=$RANCHER_URL" >> $GITHUB_OUTPUT
+
+      - name: Install Rancher
+        run: |
+          helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+          helm repo update
+          kubectl create namespace cattle-system
+          echo "Installing Rancher version ${{ github.event.inputs.rancher_version }}..."
+          helm install rancher rancher-latest/rancher \
+            --namespace cattle-system \
+            --set hostname=$(echo ${{ steps.get-rancher-url.outputs.url }} | sed 's|https://||') \
+            --set bootstrapPassword=admin \
+            --set replicas=1 \
+            --version ${{ github.event.inputs.rancher_version }}
+          echo "Waiting for Rancher deployment to be ready..."
+          kubectl wait --for=condition=ready pod -l app=rancher -n cattle-system --timeout=600s
+          echo "Rancher deployment is ready."
+
+      - name: Wait for Rancher API to be available
+        run: |
+          echo "Waiting for Rancher API to respond at ${{ steps.get-rancher-url.outputs.url }}/v3"
+          ATTEMPTS=0
+          MAX_ATTEMPTS=60 # 60 attempts * 5 seconds = 300 seconds timeout
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" "${{ steps.get-rancher-url.outputs.url }}/v3")
+
+            if [ "$HTTP_CODE" -eq 401 ]; then
+              echo "Rancher API is up and responding with expected 401 Unauthorized. Ready to log in."
+              exit 0
+            else
+              echo "Attempt $(($ATTEMPTS + 1))/$MAX_ATTEMPTS: Rancher API not ready (Status: $HTTP_CODE). Retrying..."
+              sleep 5
+            fi
+            ATTEMPTS=$(($ATTEMPTS + 1))
+          done
+          echo "::error::Timed out waiting for Rancher API to respond with a 401 status."
+          exit 1
+
+      - name: Create Rancher API Token
+        id: create-token
+        run: |
+          echo "Logging in to Rancher to create an API token..."
+          LOGIN_RESPONSE=$(curl -k -s -X POST \
+            '${{ steps.get-rancher-url.outputs.url }}/v3-public/localProviders/local?action=login' \
+            -H 'Content-Type: application/json' \
+            --data-binary '{"username":"admin","password":"admin"}')
+          
+          LOGIN_TOKEN=$(echo $LOGIN_RESPONSE | jq -r .token)
+          if [ "$LOGIN_TOKEN" == "null" ] || [ -z "$LOGIN_TOKEN" ]; then
+            echo "::error::Failed to get login token from Rancher."
+            echo "Response: $LOGIN_RESPONSE"
+            exit 1
+          fi
+
+          TOKEN_RESPONSE=$(curl -k -s -X POST \
+            '${{ steps.get-rancher-url.outputs.url }}/v3/tokens' \
+            -H "Authorization: Bearer $LOGIN_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-binary '{"type":"token","description":"github-action-token","ttl":0}')
+          
+          API_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .token)
+          if [ "$API_TOKEN" == "null" ] || [ -z "$API_TOKEN" ]; then
+            echo "::error::Failed to create a permanent API token."
+            echo "Response: $TOKEN_RESPONSE"
+            exit 1
+          fi
+
+          echo "::add-mask::$API_TOKEN"
+          echo "token=$API_TOKEN" >> $GITHUB_OUTPUT
+          echo "Successfully created and output Rancher API token."
+
+      - name: Test monitoring version
+        run: |
+          echo "Waiting for rancher-charts clusterrepo to be downloaded..."
+          timeout 300s bash -c 'while [[ -z "$(kubectl get clusterrepo rancher-charts -o jsonpath='{.status.downloadTime}')" ]]; do echo -n "."; sleep 5; done'
+          echo "rancher-charts clusterrepo is ready."
+          ./ob-charts-tool monitoring:testNewVersion ${{ github.event.inputs.chart_version }} \
+            --rancher-url ${{ steps.get-rancher-url.outputs.url }} \
+            --rancher-token ${{ steps.create-token.outputs.token }}
