@@ -21,12 +21,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// TODO: These values should be configurable
-const (
-	rancherURL   = "https://localhost:8443"
-	sessionToken = ""
-)
-
 // AppState defines the desired state of an application.
 type AppState string
 
@@ -70,7 +64,7 @@ type Chart struct {
 }
 
 // GetPreviousVersion fetches the Helm index and finds the version prior to the one specified.
-func GetPreviousVersion(currentVersion string) (string, error) {
+func GetPreviousVersion(currentVersion, rancherURL, sessionToken string) (string, error) {
 	indexURL := fmt.Sprintf("%s/v1/catalog.cattle.io.clusterrepos/rancher-charts?link=index", rancherURL)
 
 	req, err := http.NewRequest("GET", indexURL, nil)
@@ -115,13 +109,11 @@ func GetPreviousVersion(currentVersion string) (string, error) {
 	for _, entry := range chartEntries {
 		v, err := semver.NewVersion(entry.Version)
 		if err != nil {
-			// Skip invalid versions
 			continue
 		}
 		versions = append(versions, v)
 	}
 
-	// Sort versions in descending order
 	sort.Sort(sort.Reverse(semver.Collection(versions)))
 
 	targetVersion, err := semver.NewVersion(currentVersion)
@@ -139,7 +131,7 @@ func GetPreviousVersion(currentVersion string) (string, error) {
 }
 
 // InstallCurrentVersion installs the rancher-monitoring chart for a given version.
-func InstallCurrentVersion(chartVersion string) error {
+func InstallCurrentVersion(chartVersion, rancherURL, sessionToken string) error {
 	url := fmt.Sprintf("%s/v1/catalog.cattle.io.clusterrepos/rancher-charts?action=install", rancherURL)
 
 	payload := InstallPayload{
@@ -218,10 +210,9 @@ func InstallCurrentVersion(chartVersion string) error {
 }
 
 // UninstallChart sends a request to uninstall a chart and waits for its App resource to be deleted.
-func UninstallChart(chartName, namespace string) error {
+func UninstallChart(chartName, namespace, rancherURL, sessionToken string) error {
 	uninstallURL := fmt.Sprintf("%s/v1/catalog.cattle.io.apps/%s/%s?action=uninstall", rancherURL, namespace, chartName)
 
-	// The API requires an empty JSON object in the body.
 	req, err := http.NewRequest("POST", uninstallURL, bytes.NewBufferString("{}"))
 	if err != nil {
 		return fmt.Errorf("failed to create uninstall request: %w", err)

@@ -11,6 +11,11 @@ import (
 	monitoringTest "github.com/rancher/ob-charts-tool/internal/cmd/testNewMonitoringVersion"
 )
 
+var (
+	rancherURL   string
+	sessionToken string
+)
+
 // testNewVersionCmd represents the testNewVersion command
 var testNewVersionCmd = &cobra.Command{
 	Use:     "testNewVersion",
@@ -22,51 +27,53 @@ var testNewVersionCmd = &cobra.Command{
 		}
 		return fmt.Errorf("you must provide the target upstream chart version")
 	},
-	Run: testNewMonitoringVersion,
+	RunE: testNewMonitoringVersion,
 }
 
-func testNewMonitoringVersion(_ *cobra.Command, args []string) {
+func init() {
+	testNewVersionCmd.Flags().StringVar(&rancherURL, "rancher-url", "https://localhost:8443", "Rancher URL")
+	testNewVersionCmd.Flags().StringVar(&sessionToken, "rancher-token", "", "Rancher session token")
+	testNewVersionCmd.MarkFlagRequired("rancher-token")
+}
+
+func testNewMonitoringVersion(cmd *cobra.Command, args []string) error {
 	newVersion := args[0]
 
 	// 1. Get previous version
 	fmt.Printf("Looking for version previous to %s...\n", newVersion)
-	previousVersion, err := monitoringTest.GetPreviousVersion(newVersion)
+	previousVersion, err := monitoringTest.GetPreviousVersion(newVersion, rancherURL, sessionToken)
 	if err != nil {
-		fmt.Printf("Error getting previous version: %v\n", err)
-		return
+		return fmt.Errorf("error getting previous version: %w", err)
 	}
 	if previousVersion == "" {
-		fmt.Printf("No previous version found for %s. Cannot perform comparison.\n", newVersion)
-		return
+		return fmt.Errorf("no previous version found for %s. Cannot perform comparison", newVersion)
 	}
 	fmt.Printf("Found previous version: %s\n", previousVersion)
 
 	// 2. Test previous version
 	fmt.Printf("\n--- Testing Previous Version: %s ---\n", previousVersion)
-	previousVersionResults, err := testVersion(previousVersion)
+	previousVersionResults, err := testVersion(previousVersion, rancherURL, sessionToken)
 	if err != nil {
-		fmt.Printf("Failed to test version %s: %v\n", previousVersion, err)
-		return
+		return fmt.Errorf("failed to test version %s: %w", previousVersion, err)
 	}
 
 	// 3. Test new version
 	fmt.Printf("\n--- Testing New Version: %s ---\n", newVersion)
-	newVersionResults, err := testVersion(newVersion)
+	newVersionResults, err := testVersion(newVersion, rancherURL, sessionToken)
 	if err != nil {
-		fmt.Printf("Failed to test version %s: %v\n", newVersion, err)
-		return
+		return fmt.Errorf("failed to test version %s: %w", newVersion, err)
 	}
 
 	// 4. Compare results
 	fmt.Printf("\n--- Comparing Results ---\n")
-	compareResults(previousVersionResults, newVersionResults)
+	return compareResults(previousVersionResults, newVersionResults)
 }
 
 // testVersion is a helper to install, test, and uninstall a specific chart version.
-func testVersion(version string) (map[string][]monitoringTest.PanelTestResult, error) {
+func testVersion(version, rancherURL, sessionToken string) (map[string][]monitoringTest.PanelTestResult, error) {
 	// Install
 	fmt.Printf("Installing rancher-monitoring version %s...\n", version)
-	if err := monitoringTest.InstallCurrentVersion(version); err != nil {
+	if err := monitoringTest.InstallCurrentVersion(version, rancherURL, sessionToken); err != nil {
 		return nil, fmt.Errorf("installation failed: %w", err)
 	}
 	fmt.Println("Installation complete. Waiting 1 minute for components to stabilize...")
@@ -82,7 +89,7 @@ func testVersion(version string) (map[string][]monitoringTest.PanelTestResult, e
 	allResults := make(map[string][]monitoringTest.PanelTestResult)
 	for name, dashboard := range dashboards {
 		fmt.Printf("Testing dashboard: %s\n", name)
-		results, err := monitoringTest.TestDashboard(dashboard.(map[string]interface{}))
+		results, err := monitoringTest.TestDashboard(dashboard.(map[string]interface{}), rancherURL, sessionToken)
 		if err != nil {
 			fmt.Printf("  WARNING: Failed to test dashboard %s: %v\n", name, err)
 			continue
@@ -93,13 +100,13 @@ func testVersion(version string) (map[string][]monitoringTest.PanelTestResult, e
 }
 
 // uninstallChart is a helper to uninstall both monitoring charts.
-func uninstallChart(version string) error {
+func uninstallChart(version, rancherURL, sessionToken string) error {
 	fmt.Printf("Uninstalling rancher-monitoring for version %s...\n", version)
-	if err := monitoringTest.UninstallChart("rancher-monitoring", "cattle-monitoring-system"); err != nil {
+	if err := monitoringTest.UninstallChart("rancher-monitoring", "cattle-monitoring-system", rancherURL, sessionToken); err != nil {
 		return fmt.Errorf("failed to uninstall rancher-monitoring: %w", err)
 	}
 	fmt.Println("Uninstalling rancher-monitoring-crd...")
-	if err := monitoringTest.UninstallChart("rancher-monitoring-crd", "cattle-monitoring-system"); err != nil {
+	if err := monitoringTest.UninstallChart("rancher-monitoring-crd", "cattle-monitoring-system", rancherURL, sessionToken); err != nil {
 		return fmt.Errorf("failed to uninstall rancher-monitoring-crd: %w", err)
 	}
 	fmt.Println("Uninstallation complete.")
@@ -107,7 +114,7 @@ func uninstallChart(version string) error {
 }
 
 // compareResults analyzes the test outcomes and prints any regressions or fixes.
-func compareResults(prevResults, newResults map[string][]monitoringTest.PanelTestResult) {
+func compareResults(prevResults, newResults map[string][]monitoringTest.PanelTestResult) error {
 	regressionsFound := 0
 	fixesFound := 0
 
@@ -178,7 +185,12 @@ func compareResults(prevResults, newResults map[string][]monitoringTest.PanelTes
 	fmt.Println("\n--- Summary ---")
 	if regressionsFound == 0 && fixesFound == 0 {
 		fmt.Println("No changes detected between versions.")
-	} else {
-		fmt.Printf("Found %d regressions and %d fixes.\n", regressionsFound, fixesFound)
+		return nil
 	}
+
+	fmt.Printf("Found %d regressions and %d fixes.\n", regressionsFound, fixesFound)
+	if regressionsFound > 0 {
+		return fmt.Errorf("test failed with %d regressions", regressionsFound)
+	}
+	return nil
 }

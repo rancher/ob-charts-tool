@@ -83,9 +83,7 @@ func GetDashboards() (map[string]interface{}, error) {
 
 	allDashboards := make(map[string]interface{})
 
-	// Iterate over each ConfigMap
 	for _, cm := range cmList.Items {
-		// Ignore the specified ConfigMap
 		if slices.Contains(ignoredConfigMaps, cm.Name) {
 			continue
 		}
@@ -164,7 +162,7 @@ func getTemplateVars(clientset *kubernetes.Clientset, templatingList []interface
 }
 
 // TestDashboard executes all queries within a given dashboard against the Prometheus API.
-func TestDashboard(dashboard map[string]interface{}) ([]PanelTestResult, error) {
+func TestDashboard(dashboard map[string]interface{}, rancherURL, sessionToken string) ([]PanelTestResult, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build kubeconfig for TestDashboard: %w", err)
@@ -186,7 +184,6 @@ func TestDashboard(dashboard map[string]interface{}) ([]PanelTestResult, error) 
 		return nil, fmt.Errorf("failed to get dynamic template variables: %w", err)
 	}
 
-	// Create a replacer for interpolating variables in queries
 	replacer := strings.NewReplacer(
 		"$namespace", templateVars.Namespace,
 		"$cluster", templateVars.Cluster,
@@ -233,7 +230,6 @@ func TestDashboard(dashboard map[string]interface{}) ([]PanelTestResult, error) 
 				continue
 			}
 
-			// Interpolate variables
 			finalExpr := replacer.Replace(expr)
 
 			prometheusQueryURL := fmt.Sprintf("%s/k8s/clusters/local/api/v1/namespaces/cattle-monitoring-system/services/http:rancher-monitoring-prometheus:9090/proxy/api/v1/query", rancherURL)
@@ -247,7 +243,6 @@ func TestDashboard(dashboard map[string]interface{}) ([]PanelTestResult, error) 
 
 			resp, err := client.Do(req)
 			if err != nil {
-				// handle error
 				continue
 			}
 			defer resp.Body.Close()
