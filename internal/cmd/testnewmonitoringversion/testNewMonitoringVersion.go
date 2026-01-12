@@ -1,4 +1,4 @@
-package testNewMonitoringVersion
+package testnewmonitoringversion
 
 import (
 	"bytes"

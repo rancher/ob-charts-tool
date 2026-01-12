@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/rancher/ob-charts-tool/cmd/groups"
-	monitoringTest "github.com/rancher/ob-charts-tool/internal/cmd/testNewMonitoringVersion"
+	monitoringTest "github.com/rancher/ob-charts-tool/internal/cmd/testnewmonitoringversion"
 )
 
 var (
@@ -36,7 +36,7 @@ func init() {
 	testNewVersionCmd.MarkFlagRequired("rancher-token")
 }
 
-func testNewMonitoringVersion(cmd *cobra.Command, args []string) error {
+func testNewMonitoringVersion(_ *cobra.Command, args []string) error {
 	newVersion := args[0]
 
 	// 1. Get previous version
