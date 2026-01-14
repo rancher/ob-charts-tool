@@ -45,9 +45,9 @@ type GitRefs struct {
 
 // BranchInfo holds information about the current branch
 type BranchInfo struct {
-	Name           string
-	CommitsBehind  int
-	IsUpToDate     bool
+	Name          string
+	CommitsBehind int
+	IsUpToDate    bool
 }
 
 // PackageInfo holds information about a modified package
