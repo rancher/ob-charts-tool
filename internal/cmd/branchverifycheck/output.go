@@ -51,37 +51,29 @@ func OutputJSON(result *VerificationResult) {
 
 // OutputHuman prints the verification result in human-readable format.
 func OutputHuman(result *VerificationResult, branchName string) {
-	fmt.Printf("\n=== Branch Verification Results for '%s' ===\n\n", branchName)
+	fmt.Printf("\n=== Branch Verification Results for '%s' ===\n", branchName)
 
-	for _, check := range result.Checks {
-		status := "PASS"
-		if !check.Passed {
-			if check.Critical {
-				status = "FAIL"
-			} else {
-				status = "WARN"
+	// Global checks section
+	fmt.Printf("\n--- Global Checks ---\n\n")
+	for _, check := range result.GlobalChecks {
+		printCheck(check)
+	}
+
+	// Per-package checks section
+	if len(result.PackageResults) > 0 {
+		fmt.Printf("\n--- Package Checks ---\n")
+		for _, pkgResult := range result.PackageResults {
+			fmt.Printf("\n  Package: %s\n\n", pkgResult.Package.FullPath)
+			for _, check := range pkgResult.Checks {
+				printCheckIndented(check, "    ")
 			}
 		}
-
-		fmt.Printf("[%s] %s\n", status, check.Name)
-		fmt.Printf("  %s\n\n", check.Message)
 	}
 
 	// Summary
-	passed := 0
-	failed := 0
-	warnings := 0
-	for _, check := range result.Checks {
-		if check.Passed {
-			passed++
-		} else if check.Critical {
-			failed++
-		} else {
-			warnings++
-		}
-	}
-
-	fmt.Printf("Summary: %d passed, %d failed, %d warnings\n", passed, failed, warnings)
+	passed, failed, warnings := result.CountResults()
+	fmt.Printf("\n--- Summary ---\n\n")
+	fmt.Printf("Total: %d passed, %d failed, %d warnings\n", passed, failed, warnings)
 
 	if failed > 0 {
 		fmt.Println("\nVerification FAILED - Critical issues found")
@@ -90,4 +82,29 @@ func OutputHuman(result *VerificationResult, branchName string) {
 	} else {
 		fmt.Println("\nVerification PASSED - All checks successful")
 	}
+}
+
+// printCheck prints a single check result
+func printCheck(check CheckResult) {
+	status := getCheckStatus(check)
+	fmt.Printf("[%s] %s\n", status, check.Name)
+	fmt.Printf("  %s\n\n", check.Message)
+}
+
+// printCheckIndented prints a single check result with custom indentation
+func printCheckIndented(check CheckResult, indent string) {
+	status := getCheckStatus(check)
+	fmt.Printf("%s[%s] %s\n", indent, status, check.Name)
+	fmt.Printf("%s  %s\n\n", indent, check.Message)
+}
+
+// getCheckStatus returns the status string for a check
+func getCheckStatus(check CheckResult) string {
+	if check.Passed {
+		return "PASS"
+	}
+	if check.Critical {
+		return "FAIL"
+	}
+	return "WARN"
 }

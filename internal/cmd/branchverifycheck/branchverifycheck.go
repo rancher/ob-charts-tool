@@ -16,8 +16,9 @@ import (
 // - If chart build scripts are run targeting the modified package, no uncommitted changes are found (hard fail)
 func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	result := &VerificationResult{
-		Success: true,
-		Checks:  []CheckResult{},
+		Success:        true,
+		GlobalChecks:   []CheckResult{},
+		PackageResults: []PackageResult{},
 	}
 
 	// Use progress printer from output.go
@@ -26,10 +27,14 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	progress.Println("Starting branch verification...")
 	progress.Println("")
 
+	// ============================================
+	// GLOBAL CHECKS - Run once for the whole branch
+	// ============================================
+
 	// Step 1: Check if path is a git repository
 	progress.Print("Checking if path is a git repository... ")
 	gitRepoCheck := CheckIsGitRepo(path)
-	result.AddCheck(gitRepoCheck)
+	result.AddGlobalCheck(gitRepoCheck)
 	if !gitRepoCheck.Passed {
 		progress.Println("FAILED")
 		return result, fmt.Errorf("path is not a git repository")
@@ -45,7 +50,7 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	// Step 2: Check upstream remote
 	progress.Print("Checking upstream repository... ")
 	upstreamCheck := CheckHasObTeamChartsRemote(repo)
-	result.AddCheck(upstreamCheck)
+	result.AddGlobalCheck(upstreamCheck)
 	if !upstreamCheck.Passed {
 		progress.Println("FAILED")
 	} else {
@@ -55,7 +60,7 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	// Step 3: Check branch status (not on main/master)
 	progress.Print("Checking branch status... ")
 	branchName, branchCheck := CheckOnFeatureBranch(repo)
-	result.AddCheck(branchCheck)
+	result.AddGlobalCheck(branchCheck)
 	if !branchCheck.Passed {
 		progress.Println("FAILED")
 	} else {
@@ -69,7 +74,7 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	defer CleanupToolRemote(repo)
 	if err != nil {
 		progress.Println("FAILED")
-		result.AddCheck(CheckResult{
+		result.AddGlobalCheck(CheckResult{
 			Name:     "Git References",
 			Passed:   false,
 			Message:  fmt.Sprintf("Failed to get git refs: %v", err),
@@ -84,7 +89,7 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	// Step 5: Check if branch is current with upstream
 	progress.Print("Checking if branch is current with upstream... ")
 	currentCheck := CheckBranchCurrent(refs, repo)
-	result.AddCheck(currentCheck)
+	result.AddGlobalCheck(currentCheck)
 	if !currentCheck.Passed {
 		progress.Println("WARN")
 	} else {
@@ -94,7 +99,7 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	// Step 6: Find modified packages
 	progress.Print("Finding modified packages... ")
 	packages, packagesCheck := FindModifiedPackages(refs)
-	result.AddCheck(packagesCheck)
+	result.AddGlobalCheck(packagesCheck)
 	if len(packages) > 0 {
 		progress.Printf("OK (found: %v)\n", packageNames(packages))
 	} else {
@@ -102,23 +107,27 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	}
 	progress.Println("")
 
-	// Step 7: Check sequential versioning for each modified package
+	// ============================================
+	// PER-PACKAGE CHECKS - Run for each modified package
+	// ============================================
+
 	for _, pkg := range packages {
+		pkgResult := result.GetOrCreatePackageResult(pkg)
+
+		// Check sequential versioning
 		progress.Printf("Checking sequential version for %s... ", pkg.FullPath)
 		versionCheck := CheckSequentialVersion(path, pkg)
-		result.AddCheck(versionCheck)
+		pkgResult.AddCheck(versionCheck)
 		if versionCheck.Passed {
 			progress.Println("OK")
 		} else {
 			progress.Println("FAILED")
 		}
-	}
 
-	// Step 7b: Check that charts have been built for each modified package
-	for _, pkg := range packages {
+		// Check that chart has been built
 		progress.Printf("Checking chart built for %s... ", pkg.FullPath)
 		chartCheck := CheckChartBuilt(path, pkg)
-		result.AddCheck(chartCheck)
+		pkgResult.AddCheck(chartCheck)
 		if chartCheck.Passed {
 			progress.Println("OK")
 		} else {
@@ -126,10 +135,13 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 		}
 	}
 
-	// Step 8: Check repo is clean before running builds
+	// ============================================
+	// GLOBAL CHECK - Repository cleanliness before build
+	// ============================================
+
 	progress.Print("Checking repository is clean before build... ")
 	cleanCheck := CheckRepoClean(repo)
-	result.AddCheck(cleanCheck)
+	result.AddGlobalCheck(cleanCheck)
 	repoIsClean := cleanCheck.Passed
 	if !repoIsClean {
 		progress.Println("DIRTY (skipping build checks)")
@@ -137,12 +149,17 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 		progress.Println("OK")
 	}
 
-	// Step 9: Run build and check for uncommitted changes (only if repo was clean)
+	// ============================================
+	// PER-PACKAGE CHECK - Build verification (only if repo was clean)
+	// ============================================
+
 	if repoIsClean {
 		for _, pkg := range packages {
+			pkgResult := result.GetOrCreatePackageResult(pkg)
+
 			progress.Printf("Running build check for %s (this may take a while)... ", pkg.FullPath)
 			buildCheck := CheckBuildNoChanges(path, pkg)
-			result.AddCheck(buildCheck)
+			pkgResult.AddCheck(buildCheck)
 			if buildCheck.Passed {
 				progress.Println("OK")
 			} else {
@@ -155,12 +172,7 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	outputResults(result, branchName, jsonOutput)
 
 	// Determine overall success
-	for _, check := range result.Checks {
-		if !check.Passed && check.Critical {
-			result.Success = false
-			break
-		}
-	}
+	result.Success = !result.HasCriticalFailure()
 
 	return result, nil
 }
