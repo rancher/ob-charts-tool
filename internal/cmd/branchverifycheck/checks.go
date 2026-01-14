@@ -93,28 +93,34 @@ func CheckOnFeatureBranch(repo *git.Repository) (string, CheckResult) {
 }
 
 // CheckBranchCurrent checks if the branch is up-to-date with upstream/main.
-func CheckBranchCurrent(refs *GitRefs, repo *git.Repository) CheckResult {
+func CheckBranchCurrent(refs *GitRefs, repo *git.Repository) (BranchInfo, CheckResult) {
 	check := CheckResult{
 		Name:     "Branch Current with Upstream",
 		Critical: false, // Soft fail - just a warning
+	}
+	branchInfo := BranchInfo{
+		Name:          refs.HeadRef.Name().Short(),
+		CommitsBehind: 0,
 	}
 
 	if refs.MergeBaseCommit.Hash == refs.UpstreamCommit.Hash {
 		check.Passed = true
 		check.Message = "Branch is up-to-date with upstream/main"
-		return check
+		branchInfo.IsUpToDate = true
+		return branchInfo, check
 	}
 
 	// Count how many commits behind
-	commitsBehind := CountCommitsBehind(repo, refs.UpstreamRef, refs.MergeBaseCommit.Hash)
+	branchInfo.CommitsBehind = CountCommitsBehind(repo, refs.UpstreamRef, refs.MergeBaseCommit.Hash)
 
 	check.Passed = false
-	if commitsBehind > 0 {
-		check.Message = fmt.Sprintf("Branch is %d commit(s) behind upstream/main - consider rebasing to ensure version checks are accurate", commitsBehind)
+	branchInfo.IsUpToDate = false
+	if branchInfo.CommitsBehind > 0 {
+		check.Message = fmt.Sprintf("Branch is %d commit(s) behind upstream/main - consider rebasing to ensure version checks are accurate", branchInfo.CommitsBehind)
 	} else {
 		check.Message = "Branch is behind upstream/main - consider rebasing to ensure version checks are accurate"
 	}
-	return check
+	return branchInfo, check
 }
 
 // FindModifiedPackages finds which packages were modified in the branch.

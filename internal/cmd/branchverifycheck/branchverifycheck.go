@@ -88,10 +88,16 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 
 	// Step 5: Check if branch is current with upstream
 	progress.Print("Checking if branch is current with upstream... ")
-	currentCheck := CheckBranchCurrent(refs, repo)
+	branchInfo, currentCheck := CheckBranchCurrent(refs, repo)
 	result.AddGlobalCheck(currentCheck)
 	if !currentCheck.Passed {
-		progress.Println("WARN")
+		if branchInfo.CommitsBehind != 0 {
+			progress.Println(
+				fmt.Sprintf("WARN - Branch is %d commit(s) behind main", branchInfo.CommitsBehind),
+			)
+		} else {
+			progress.Println("WARN - Branch is behind main")
+		}
 	} else {
 		progress.Println("OK")
 	}
