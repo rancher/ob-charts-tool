@@ -64,9 +64,9 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 
 	// Step 4: Get git refs (ensures upstream remote, fetches, finds merge-base)
 	progress.Print("Setting up upstream remote and fetching... ")
-	refs, upstreamInfo, err := GetGitRefs(repo, path)
+	refs, err := GetGitRefs(repo, path)
 	// Ensure cleanup of any temporary remote we created
-	defer CleanupToolRemote(path, upstreamInfo)
+	defer CleanupToolRemote(repo)
 	if err != nil {
 		progress.Println("FAILED")
 		result.AddCheck(CheckResult{

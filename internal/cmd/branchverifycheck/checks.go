@@ -53,7 +53,7 @@ func CheckHasObTeamChartsRemote(repo *git.Repository) CheckResult {
 
 	for remoteName, urls := range remotes {
 		for _, url := range urls {
-			if isCanonicalUpstreamURL(url) {
+			if gitpkg.IsGitHubRepoURL(url, "rancher", "ob-team-charts") {
 				check.Passed = true
 				check.Message = fmt.Sprintf("Found canonical upstream in remote '%s'", remoteName)
 				return check
