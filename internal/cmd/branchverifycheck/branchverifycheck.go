@@ -114,6 +114,18 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 		}
 	}
 
+	// Step 7b: Check that charts have been built for each modified package
+	for _, pkg := range packages {
+		progress.Printf("Checking chart built for %s... ", pkg.FullPath)
+		chartCheck := CheckChartBuilt(path, pkg)
+		result.AddCheck(chartCheck)
+		if chartCheck.Passed {
+			progress.Println("OK")
+		} else {
+			progress.Println("FAILED")
+		}
+	}
+
 	// Step 8: Check repo is clean before running builds
 	progress.Print("Checking repository is clean before build... ")
 	cleanCheck := CheckRepoClean(repo)

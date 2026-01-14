@@ -201,8 +201,100 @@ func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
 	return packages, check
 }
 
-// CheckSequentialVersion verifies the package version is sequential.
-// Applies some package specific logic to identify the correct `package.yaml` file.
+// PackageVersionInfo contains version information extracted from a package.
+type PackageVersionInfo struct {
+	Version          string
+	PackageYAMLPath  string
+	ChartsDir        string
+	ExistingVersions map[string]bool
+}
+
+// getPackageYAMLPath returns the path to package.yaml for a given package.
+// Handles package-specific directory structures.
+func getPackageYAMLPath(repoPath string, pkg PackageInfo) string {
+	if pkg.Name == "rancher-monitoring" {
+		// rancher-monitoring has a subdirectory with the package name
+		return filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, pkg.Name, "package.yaml")
+	}
+	// rancher-logging, rancher-project-monitoring, etc. have package.yaml at version root
+	return filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, "package.yaml")
+}
+
+// getPackageVersionInfo reads version info from package.yaml and existing built charts.
+func getPackageVersionInfo(repoPath string, pkg PackageInfo) (*PackageVersionInfo, error) {
+	info := &PackageVersionInfo{
+		PackageYAMLPath: getPackageYAMLPath(repoPath, pkg),
+		ChartsDir:       filepath.Join(repoPath, "charts", pkg.Name),
+	}
+
+	// Read and parse package.yaml
+	data, err := os.ReadFile(info.PackageYAMLPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read package.yaml: %w", err)
+	}
+
+	var pkgYAML PackageYAML
+	if err := yaml.Unmarshal(data, &pkgYAML); err != nil {
+		return nil, fmt.Errorf("failed to parse package.yaml: %w", err)
+	}
+	info.Version = pkgYAML.Version
+
+	// Get all built chart versions
+	builtVersions, err := os.ReadDir(info.ChartsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Charts directory doesn't exist yet - that's ok, we'll return empty map
+			info.ExistingVersions = make(map[string]bool)
+			return info, nil
+		}
+		return nil, fmt.Errorf("failed to read charts directory: %w", err)
+	}
+
+	// Build a set of existing version strings for quick lookup
+	info.ExistingVersions = make(map[string]bool)
+	for _, vDir := range builtVersions {
+		if vDir.IsDir() {
+			info.ExistingVersions[vDir.Name()] = true
+		}
+	}
+
+	return info, nil
+}
+
+// CheckChartBuilt verifies that a chart matching the package version exists in the charts directory.
+func CheckChartBuilt(repoPath string, pkg PackageInfo) CheckResult {
+	check := CheckResult{
+		Name:     fmt.Sprintf("Chart Built (%s)", pkg.FullPath),
+		Critical: true,
+	}
+
+	info, err := getPackageVersionInfo(repoPath, pkg)
+	if err != nil {
+		check.Passed = false
+		check.Message = err.Error()
+		return check
+	}
+
+	// Check if charts directory exists with any versions
+	if len(info.ExistingVersions) == 0 {
+		check.Passed = false
+		check.Message = fmt.Sprintf("No charts exist for %s - chart has not been built", pkg.Name)
+		return check
+	}
+
+	// Check if the current version exists in built charts
+	if !info.ExistingVersions[info.Version] {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Version %s not found in built charts - chart has not been built", info.Version)
+		return check
+	}
+
+	check.Passed = true
+	check.Message = fmt.Sprintf("Chart version %s exists in built charts", info.Version)
+	return check
+}
+
+// CheckSequentialVersion verifies the package version is sequential (n-1 check).
 // Reads the version from package.yaml, then verifies the previous version (n-1) exists
 // in the built charts directory.
 //
@@ -210,75 +302,32 @@ func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
 // For packages without rancher suffix: verifies a lower version exists (simple semver)
 func CheckSequentialVersion(repoPath string, pkg PackageInfo) CheckResult {
 	check := CheckResult{
-		Name:     fmt.Sprintf("Sequential Version Check (%s)", pkg.FullPath),
+		Name:     fmt.Sprintf("Sequential Version (%s)", pkg.FullPath),
 		Critical: true,
 	}
 
-	// Determine package.yaml path based on package type
-	var packageYAMLPath string
-	if pkg.Name == "rancher-monitoring" {
-		// rancher-monitoring has a subdirectory with the package name
-		packageYAMLPath = filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, pkg.Name, "package.yaml")
-	} else {
-		// rancher-logging, rancher-project-monitoring, etc. have package.yaml at version root
-		packageYAMLPath = filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, "package.yaml")
-	}
-
-	data, err := os.ReadFile(packageYAMLPath)
+	info, err := getPackageVersionInfo(repoPath, pkg)
 	if err != nil {
 		check.Passed = false
-		check.Message = fmt.Sprintf("Failed to read package.yaml: %v", err)
+		check.Message = err.Error()
 		return check
 	}
 
-	var pkgYAML PackageYAML
-	if err := yaml.Unmarshal(data, &pkgYAML); err != nil {
-		check.Passed = false
-		check.Message = fmt.Sprintf("Failed to parse package.yaml: %v", err)
-		return check
-	}
-
-	currentVersion := pkgYAML.Version
-
-	// Get all built chart versions
-	chartsDir := filepath.Join(repoPath, "charts", pkg.Name)
-	builtVersions, err := os.ReadDir(chartsDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Charts directory doesn't exist - the chart should have been built
-			check.Passed = false
-			check.Message = fmt.Sprintf("Charts directory does not exist for %s - chart has not been built", pkg.Name)
-			return check
-		}
-		check.Passed = false
-		check.Message = fmt.Sprintf("Failed to read charts directory: %v", err)
-		return check
-	}
-
-	// Build a set of existing version strings for quick lookup
-	existingVersions := make(map[string]bool)
-	for _, vDir := range builtVersions {
-		if vDir.IsDir() {
-			existingVersions[vDir.Name()] = true
+	// If there are no existing versions or only the current version, this is the first version
+	versionsExcludingCurrent := 0
+	for v := range info.ExistingVersions {
+		if v != info.Version {
+			versionsExcludingCurrent++
 		}
 	}
-
-	// First, verify the current version exists in built charts
-	if !existingVersions[currentVersion] {
-		check.Passed = false
-		check.Message = fmt.Sprintf("Version %s not found in built charts - chart has not been built", currentVersion)
-		return check
-	}
-
-	// If there's only one version and it matches current, this is the first version (new package)
-	if len(existingVersions) == 1 {
+	if versionsExcludingCurrent == 0 {
 		check.Passed = true
-		check.Message = fmt.Sprintf("Version %s is first version for this package", currentVersion)
+		check.Message = fmt.Sprintf("Version %s is first version for this package", info.Version)
 		return check
 	}
 
 	// Check if this is a rancher-suffixed version
-	currentRancherRelease, rancherErr := extractRancherRelease(currentVersion)
+	currentRancherRelease, rancherErr := extractRancherRelease(info.Version)
 
 	if rancherErr == nil {
 		// Has rancher suffix - check that n-1 exists
@@ -286,38 +335,38 @@ func CheckSequentialVersion(repoPath string, pkg PackageInfo) CheckResult {
 			// This is -rancher.1, which is the first release for this base version
 			// No previous rancher release to check for this base, this is valid
 			check.Passed = true
-			check.Message = fmt.Sprintf("Version %s is first rancher release for this base version", currentVersion)
+			check.Message = fmt.Sprintf("Version %s is first rancher release for this base version", info.Version)
 			return check
 		}
 
 		// Build the expected previous version string
-		baseVersion := strings.Split(currentVersion, "-rancher.")[0]
+		baseVersion := strings.Split(info.Version, "-rancher.")[0]
 		previousVersion := fmt.Sprintf("%s-rancher.%d", baseVersion, currentRancherRelease-1)
 
-		if existingVersions[previousVersion] {
+		if info.ExistingVersions[previousVersion] {
 			check.Passed = true
-			check.Message = fmt.Sprintf("Version %s is sequential (previous %s exists)", currentVersion, previousVersion)
+			check.Message = fmt.Sprintf("Version %s is sequential (previous %s exists)", info.Version, previousVersion)
 			return check
 		}
 
 		check.Passed = false
 		check.Message = fmt.Sprintf("Version %s is not sequential: previous version %s not found in built charts",
-			currentVersion, previousVersion)
+			info.Version, previousVersion)
 		return check
 	}
 
 	// No rancher suffix (e.g., rancher-project-monitoring) - verify there's at least one lower version
-	currentVer, err := semver.NewVersion(currentVersion)
+	currentVer, err := semver.NewVersion(info.Version)
 	if err != nil {
 		check.Passed = false
-		check.Message = fmt.Sprintf("Invalid version format: %s", currentVersion)
+		check.Message = fmt.Sprintf("Invalid version format: %s", info.Version)
 		return check
 	}
 
 	// Check if any existing version is lower than current (meaning this is a valid next version)
 	hasLowerVersion := false
 	var highestLower *semver.Version
-	for vStr := range existingVersions {
+	for vStr := range info.ExistingVersions {
 		v, err := semver.NewVersion(vStr)
 		if err != nil {
 			continue
@@ -332,12 +381,12 @@ func CheckSequentialVersion(repoPath string, pkg PackageInfo) CheckResult {
 
 	if hasLowerVersion {
 		check.Passed = true
-		check.Message = fmt.Sprintf("Version %s is valid (previous version %s exists)", currentVersion, highestLower.String())
+		check.Message = fmt.Sprintf("Version %s is valid (previous version %s exists)", info.Version, highestLower.String())
 		return check
 	}
 
 	check.Passed = false
-	check.Message = fmt.Sprintf("Version %s has no previous version in built charts", currentVersion)
+	check.Message = fmt.Sprintf("Version %s has no previous version in built charts", info.Version)
 	return check
 }
 
