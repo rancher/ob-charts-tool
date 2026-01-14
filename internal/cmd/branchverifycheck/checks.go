@@ -53,7 +53,7 @@ func CheckHasObTeamChartsRemote(repo *git.Repository) CheckResult {
 
 	for remoteName, urls := range remotes {
 		for _, url := range urls {
-			if isCanonicalUpstream(url) {
+			if isCanonicalUpstreamURL(url) {
 				check.Passed = true
 				check.Message = fmt.Sprintf("Found canonical upstream in remote '%s'", remoteName)
 				return check
@@ -64,25 +64,6 @@ func CheckHasObTeamChartsRemote(repo *git.Repository) CheckResult {
 	check.Passed = false
 	check.Message = "No remote points to canonical upstream (rancher/ob-team-charts)"
 	return check
-}
-
-// isCanonicalUpstream checks if a URL points to the canonical rancher/ob-team-charts repo.
-func isCanonicalUpstream(url string) bool {
-	// Normalize the URL for comparison
-	normalized := strings.TrimSuffix(url, ".git")
-	normalized = strings.ToLower(normalized)
-
-	// Check HTTPS format: https://github.com/rancher/ob-team-charts
-	if normalized == "https://github.com/rancher/ob-team-charts" {
-		return true
-	}
-
-	// Check SSH format: git@github.com:rancher/ob-team-charts
-	if normalized == "git@github.com:rancher/ob-team-charts" {
-		return true
-	}
-
-	return false
 }
 
 // CheckOnFeatureBranch verifies we're on a feature branch, not main/master.
@@ -211,7 +192,7 @@ func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
 			names = append(names, p.FullPath)
 		}
 		check.Passed = false
-		check.Message = fmt.Sprintf("Multiple package versions modified: %v (should modify only one)", names)
+		check.Message = fmt.Sprintf("Multiple package versions modified: %v (recommend modifying only one)", names)
 	} else {
 		check.Passed = true
 		check.Message = fmt.Sprintf("Single package version modified: %s", packages[0].FullPath)
@@ -395,7 +376,7 @@ func getRepoStatus(repo *git.Repository) RepoStatus {
 		return RepoStatus{IsClean: true}
 	}
 
-	var modifiedFiles []string
+	modifiedFiles := make([]string, 0, len(status))
 	for file, fileStatus := range status {
 		if fileStatus.Worktree != git.Unmodified || fileStatus.Staging != git.Unmodified {
 			modifiedFiles = append(modifiedFiles, file)
