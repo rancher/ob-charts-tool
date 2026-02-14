@@ -1,16 +1,27 @@
 package branchverifycheck
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
+// CheckDetails provides additional structured information about a check result.
+// Implementations can format their data for display.
+type CheckDetails interface {
+	// Format returns a human-readable string representation of the details
+	Format() string
+}
+
 // CheckResult represents the result of a single verification check
 type CheckResult struct {
-	Name     string `json:"name"`
-	Passed   bool   `json:"passed"`
-	Message  string `json:"message"`
-	Critical bool   `json:"critical"` // If true, failure should exit with error
+	Name     string       `json:"name"`
+	Passed   bool         `json:"passed"`
+	Message  string       `json:"message"`
+	Critical bool         `json:"critical"`          // If true, failure should exit with error
+	Details  CheckDetails `json:"details,omitempty"` // Optional structured data with check-specific details
 }
 
 // PackageResult groups all check results for a single package
@@ -105,6 +116,7 @@ func (r *VerificationResult) CountResults() (passed, failed, warnings int) {
 // PackageYAML represents the structure of a package.yaml file
 type PackageYAML struct {
 	Version string `yaml:"version"`
+	Commit  string `yaml:"commit"`
 }
 
 // GitRefs holds the git references needed for verification
@@ -130,10 +142,50 @@ type BranchInfo struct {
 
 // PackageInfo holds information about a modified package
 type PackageInfo struct {
-	// FullPath is the package with version (e.g., "rancher-monitoring/77.9")
+	// FullPath is the full package path relative to the packages root - package name plus version (e.g., "rancher-monitoring/77.9")
 	FullPath string `json:"fullPath"`
 	// Name is just the package name (e.g., "rancher-monitoring")
 	Name string `json:"name"`
 	// VersionDir is the version directory (e.g., "77.9")
 	VersionDir string `json:"versionDir"`
+}
+
+// BuildDiffDetails contains details about uncommitted changes after a build
+type BuildDiffDetails struct {
+	ModifiedFiles []string `json:"modifiedFiles"`
+	Diff          string   `json:"diff"`
+}
+
+// Format returns a formatted string representation of the build diff details
+func (d *BuildDiffDetails) Format() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Modified files: %v\n\n", d.ModifiedFiles))
+	sb.WriteString("Diff:\n")
+	sb.WriteString(d.Diff)
+	return sb.String()
+}
+
+// InvalidImage represents an invalid image found in values.yaml
+type InvalidImage struct {
+	Path   string   `json:"path"`
+	Issues []string `json:"issues"`
+}
+
+// ImageCheckDetails contains details about invalid images found during image validation
+type ImageCheckDetails struct {
+	InvalidImages []InvalidImage `json:"invalidImages"`
+	FilesChecked  int            `json:"filesChecked"`
+}
+
+// Format returns a formatted string representation of the image check details
+func (d *ImageCheckDetails) Format() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Found %d invalid image(s) in %d values.yaml file(s):\n\n", len(d.InvalidImages), d.FilesChecked))
+	for _, img := range d.InvalidImages {
+		sb.WriteString(fmt.Sprintf("  • %s\n", img.Path))
+		for _, issue := range img.Issues {
+			sb.WriteString(fmt.Sprintf("    - %s\n", issue))
+		}
+	}
+	return sb.String()
 }

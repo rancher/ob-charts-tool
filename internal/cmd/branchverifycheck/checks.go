@@ -505,10 +505,199 @@ func CheckBuildNoChanges(repoPath string, pkg PackageInfo) CheckResult {
 	if !status.IsClean {
 		check.Passed = false
 		check.Message = fmt.Sprintf("Build created uncommitted changes: %v", status.ModifiedFiles)
+
+		// Get the actual diff to show what changed
+		diffCmd := exec.Command("git", "diff")
+		diffCmd.Dir = repoPath
+		diffOutput, diffErr := diffCmd.CombinedOutput()
+
+		details := &BuildDiffDetails{
+			ModifiedFiles: status.ModifiedFiles,
+		}
+
+		if diffErr == nil {
+			details.Diff = string(diffOutput)
+		} else {
+			details.Diff = fmt.Sprintf("Failed to get diff: %v", diffErr)
+		}
+
+		check.Details = details
 		return check
 	}
 
 	check.Passed = true
 	check.Message = "Build successful with no uncommitted changes"
 	return check
+}
+
+func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
+	check := CheckResult{
+		Name:     fmt.Sprintf("Package Images origins (%s)", pkg.FullPath),
+		Critical: false,
+	}
+
+	info, err := getPackageVersionInfo(repoPath, pkg)
+	if err != nil {
+		check.Passed = false
+		check.Message = err.Error()
+		return check
+	}
+
+	chartPath := filepath.Join(repoPath, "charts", pkg.Name, info.Version)
+
+	// TODO eventually we should also check CRD charts values.yaml just in case
+
+	// Find all values.yaml files in the chart directory
+	valuesFiles, err := findValuesYAMLFiles(chartPath)
+	if err != nil {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Failed to find values.yaml files: %v", err)
+		return check
+	}
+
+	if len(valuesFiles) == 0 {
+		check.Passed = true
+		check.Message = "No values.yaml files found to check"
+		return check
+	}
+
+	// Track any invalid images found
+	var invalidImages []InvalidImage
+
+	// Iterate through each values.yaml file
+	for _, valuesFile := range valuesFiles {
+		data, err := os.ReadFile(valuesFile)
+		if err != nil {
+			check.Passed = false
+			check.Message = fmt.Sprintf("Failed to read %s: %v", valuesFile, err)
+			return check
+		}
+
+		var values map[string]interface{}
+		if err := yaml.Unmarshal(data, &values); err != nil {
+			check.Passed = false
+			check.Message = fmt.Sprintf("Failed to parse %s: %v", valuesFile, err)
+			return check
+		}
+
+		// Recursively find all image definitions and validate them
+		relPath, _ := filepath.Rel(chartPath, valuesFile)
+		findInvalidImages(values, relPath, &invalidImages)
+	}
+
+	if len(invalidImages) > 0 {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Found %d invalid image(s)", len(invalidImages))
+		check.Details = &ImageCheckDetails{
+			InvalidImages: invalidImages,
+			FilesChecked:  len(valuesFiles),
+		}
+		return check
+	}
+
+	check.Passed = true
+	check.Message = fmt.Sprintf("All images use registry=\"\" and start with \"rancher/\" (checked %d values.yaml file(s))", len(valuesFiles))
+	return check
+}
+
+// findValuesYAMLFiles recursively finds all values.yaml files in the given directory.
+func findValuesYAMLFiles(dir string) ([]string, error) {
+	var valuesFiles []string
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && (info.Name() == "values.yaml" || info.Name() == "values.yml") {
+			valuesFiles = append(valuesFiles, path)
+		}
+		return nil
+	})
+
+	return valuesFiles, err
+}
+
+// findInvalidImages recursively searches for image definitions in a YAML structure
+// and adds any invalid images to the invalidImages slice.
+// An image is invalid if:
+//   - registry field is not empty string
+//   - repository field does not start with "rancher/"
+func findInvalidImages(data interface{}, path string, invalidImages *[]InvalidImage) {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		// Check if this map represents an image definition
+		if isImageDefinition(v) {
+			validateImageDefinition(v, path, invalidImages)
+		}
+
+		// Recursively search nested maps
+		for key, value := range v {
+			var newPath string
+			if path != "" {
+				newPath = path + "." + key
+			} else {
+				newPath = key
+			}
+			findInvalidImages(value, newPath, invalidImages)
+		}
+
+	case []interface{}:
+		// Recursively search arrays
+		for i, item := range v {
+			newPath := fmt.Sprintf("%s[%d]", path, i)
+			findInvalidImages(item, newPath, invalidImages)
+		}
+	}
+}
+
+// isImageDefinition checks if a map represents an image definition.
+// An image definition typically has fields like "repository", "tag", and optionally "registry".
+func isImageDefinition(m map[string]interface{}) bool {
+	_, hasRepository := m["repository"]
+	_, hasTag := m["tag"]
+	// An image definition should at least have a repository field
+	// (tag might be optional in some cases)
+	return hasRepository || hasTag
+}
+
+// validateImageDefinition checks if an image definition meets the requirements:
+// - registry must be empty string (or not set)
+// - repository must start with "rancher/"
+func validateImageDefinition(m map[string]interface{}, path string, invalidImages *[]InvalidImage) {
+	repository, hasRepository := m["repository"]
+	registry, hasRegistry := m["registry"]
+
+	// If no repository field, this might not be a real image definition
+	if !hasRepository {
+		return
+	}
+
+	repositoryStr, ok := repository.(string)
+	if !ok {
+		return
+	}
+
+	// Collect all issues for this image definition
+	var issues []string
+
+	// Check registry field - it should be empty string or not present
+	if hasRegistry {
+		registryStr, ok := registry.(string)
+		if !ok || registryStr != "" {
+			issues = append(issues, fmt.Sprintf("registry=%v (expected \"\")", registry))
+		}
+	}
+
+	// Check repository starts with "rancher/"
+	if !strings.HasPrefix(repositoryStr, "rancher/") {
+		issues = append(issues, fmt.Sprintf("repository=%s (expected rancher/...)", repositoryStr))
+	}
+
+	// Add all issues found for this image
+	if len(issues) > 0 {
+		*invalidImages = append(*invalidImages, InvalidImage{
+			Path:   path,
+			Issues: issues,
+		})
+	}
 }
