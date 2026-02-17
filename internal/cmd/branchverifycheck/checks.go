@@ -581,7 +581,10 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 		}
 
 		// Recursively find all image definitions and validate them
-		relPath, _ := filepath.Rel(chartPath, valuesFile)
+		relPath, err := filepath.Rel(chartPath, valuesFile)
+		if err != nil {
+			relPath = valuesFile
+		}
 		findInvalidImages(values, relPath, &invalidImages)
 	}
 
@@ -625,9 +628,11 @@ func findValuesYAMLFiles(dir string) ([]string, error) {
 func findInvalidImages(data interface{}, path string, invalidImages *[]InvalidImage) {
 	switch v := data.(type) {
 	case map[string]interface{}:
-		// Check if this map represents an image definition
+		// Check if this map represents an image definition; if so, validate it
+		// and stop recursing — its children are image fields, not nested images.
 		if isImageDefinition(v) {
 			validateImageDefinition(v, path, invalidImages)
+			return
 		}
 
 		// Recursively search nested maps
@@ -655,9 +660,7 @@ func findInvalidImages(data interface{}, path string, invalidImages *[]InvalidIm
 func isImageDefinition(m map[string]interface{}) bool {
 	_, hasRepository := m["repository"]
 	_, hasTag := m["tag"]
-	// An image definition should at least have a repository field
-	// (tag might be optional in some cases)
-	return hasRepository || hasTag
+	return hasRepository && hasTag
 }
 
 // validateImageDefinition checks if an image definition meets the requirements:
