@@ -102,14 +102,14 @@ func printCheckIndented(check CheckResult, indent string) {
 	fmt.Printf("%s[%s] %s\n", indent, status, check.Name)
 	fmt.Printf("%s  %s\n", indent, check.Message)
 	if check.Details != nil {
-		// Add indentation to each line of the details
-		detailsStr := check.Details.Format()
+		// Add indentation to each line of the details.
+		// Trim trailing newlines before splitting so the loop doesn't produce
+		// spurious blank lines; the separator below provides consistent spacing.
+		detailsStr := strings.TrimRight(check.Details.Format(), "\n")
 		lines := strings.Split(detailsStr, "\n")
 		fmt.Println() // Add blank line before details
 		for _, line := range lines {
-			if line != "" {
-				fmt.Printf("%s%s\n", indent, line)
-			}
+			fmt.Printf("%s%s\n", indent, line)
 		}
 	}
 	fmt.Println()
