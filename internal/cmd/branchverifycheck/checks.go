@@ -2,6 +2,7 @@ package branchverifycheck
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -607,11 +608,11 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 func findValuesYAMLFiles(dir string) ([]string, error) {
 	var valuesFiles []string
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && (info.Name() == "values.yaml" || info.Name() == "values.yml") {
+		if !d.IsDir() && (d.Name() == "values.yaml" || d.Name() == "values.yml") {
 			valuesFiles = append(valuesFiles, path)
 		}
 		return nil
