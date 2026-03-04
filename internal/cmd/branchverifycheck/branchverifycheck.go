@@ -171,6 +171,15 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 			} else {
 				progress.Println("FAILED")
 			}
+
+			progress.Printf("Running package image check for %s (this may take a while)... ", pkg.FullPath)
+			imagesCheck := CheckPackageImages(path, pkg)
+			pkgResult.AddCheck(imagesCheck)
+			if imagesCheck.Passed {
+				progress.Println("OK")
+			} else {
+				progress.Println("FAILED")
+			}
 		}
 	}
 

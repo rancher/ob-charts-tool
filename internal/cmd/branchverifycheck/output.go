@@ -3,6 +3,7 @@ package branchverifycheck
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	log "github.com/rancher/ob-charts-tool/internal/logging"
 )
@@ -88,14 +89,30 @@ func OutputHuman(result *VerificationResult, branchName string) {
 func printCheck(check CheckResult) {
 	status := getCheckStatus(check)
 	fmt.Printf("[%s] %s\n", status, check.Name)
-	fmt.Printf("  %s\n\n", check.Message)
+	fmt.Printf("  %s\n", check.Message)
+	if check.Details != nil {
+		fmt.Printf("\n%s\n", check.Details.Format())
+	}
+	fmt.Println()
 }
 
 // printCheckIndented prints a single check result with custom indentation
 func printCheckIndented(check CheckResult, indent string) {
 	status := getCheckStatus(check)
 	fmt.Printf("%s[%s] %s\n", indent, status, check.Name)
-	fmt.Printf("%s  %s\n\n", indent, check.Message)
+	fmt.Printf("%s  %s\n", indent, check.Message)
+	if check.Details != nil {
+		// Add indentation to each line of the details.
+		// Trim trailing newlines before splitting so the loop doesn't produce
+		// spurious blank lines; the separator below provides consistent spacing.
+		detailsStr := strings.TrimRight(check.Details.Format(), "\n")
+		lines := strings.Split(detailsStr, "\n")
+		fmt.Println() // Add blank line before details
+		for _, line := range lines {
+			fmt.Printf("%s%s\n", indent, line)
+		}
+	}
+	fmt.Println()
 }
 
 // getCheckStatus returns the status string for a check
