@@ -6,5 +6,11 @@
   "baseBranchPatterns": [
     "main"
   ],
-  "prHourlyLimit": 4
+  "prHourlyLimit": 4,
+  "packageRules": [
+    {
+      "matchDatasources": ["golang-version"],
+      "allowedVersions": "1.25"
+    }
+  ]
 }
