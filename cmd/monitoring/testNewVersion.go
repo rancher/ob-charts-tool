@@ -14,6 +14,7 @@ import (
 var (
 	rancherURL   string
 	sessionToken string
+	clusterRepo  string
 )
 
 // testNewVersionCmd represents the testNewVersion command
@@ -33,6 +34,7 @@ var testNewVersionCmd = &cobra.Command{
 func init() {
 	testNewVersionCmd.Flags().StringVar(&rancherURL, "rancher-url", "https://localhost:8443", "Rancher URL")
 	testNewVersionCmd.Flags().StringVar(&sessionToken, "rancher-token", "", "Rancher session token")
+	testNewVersionCmd.Flags().StringVar(&clusterRepo, "cluster-repo", "rancher-charts", "ClusterRepo to use")
 	testNewVersionCmd.MarkFlagRequired("rancher-token")
 }
 
@@ -41,7 +43,7 @@ func testNewMonitoringVersion(_ *cobra.Command, args []string) error {
 
 	// 1. Get previous version
 	fmt.Printf("Looking for version previous to %s...\n", newVersion)
-	previousVersion, err := monitoringTest.GetPreviousVersion(newVersion, rancherURL, sessionToken)
+	previousVersion, err := monitoringTest.GetPreviousVersion(newVersion, rancherURL, sessionToken, clusterRepo)
 	if err != nil {
 		return fmt.Errorf("error getting previous version: %w", err)
 	}
@@ -52,14 +54,14 @@ func testNewMonitoringVersion(_ *cobra.Command, args []string) error {
 
 	// 2. Test previous version
 	fmt.Printf("\n--- Testing Previous Version: %s ---\n", previousVersion)
-	previousVersionResults, err := testVersion(previousVersion, rancherURL, sessionToken)
+	previousVersionResults, err := testVersion(previousVersion, rancherURL, sessionToken, clusterRepo)
 	if err != nil {
 		return fmt.Errorf("failed to test version %s: %w", previousVersion, err)
 	}
 
 	// 3. Test new version
 	fmt.Printf("\n--- Testing New Version: %s ---\n", newVersion)
-	newVersionResults, err := testVersion(newVersion, rancherURL, sessionToken)
+	newVersionResults, err := testVersion(newVersion, rancherURL, sessionToken, clusterRepo)
 	if err != nil {
 		return fmt.Errorf("failed to test version %s: %w", newVersion, err)
 	}
@@ -70,10 +72,10 @@ func testNewMonitoringVersion(_ *cobra.Command, args []string) error {
 }
 
 // testVersion is a helper to install, test, and uninstall a specific chart version.
-func testVersion(version, rancherURL, sessionToken string) (map[string][]monitoringTest.PanelTestResult, error) {
+func testVersion(version, rancherURL, sessionToken, clusterRepo string) (map[string][]monitoringTest.PanelTestResult, error) {
 	// Install
 	fmt.Printf("Installing rancher-monitoring version %s...\n", version)
-	if err := monitoringTest.InstallCurrentVersion(version, rancherURL, sessionToken); err != nil {
+	if err := monitoringTest.InstallCurrentVersion(version, rancherURL, sessionToken, clusterRepo); err != nil {
 		return nil, fmt.Errorf("installation failed: %w", err)
 	}
 	fmt.Println("Installation complete. Waiting 1 minute for components to stabilize...")
