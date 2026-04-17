@@ -34,7 +34,7 @@ var testNewVersionCmd = &cobra.Command{
 func init() {
 	testNewVersionCmd.Flags().StringVar(&rancherURL, "rancher-url", "https://localhost:8443", "Rancher URL")
 	testNewVersionCmd.Flags().StringVar(&sessionToken, "rancher-token", "", "Rancher session token")
-	testNewVersionCmd.Flags().StringVar(&clusterRepo, "cluster-repo", "rancher-charts", "ClusterRepo to use")
+	testNewVersionCmd.Flags().StringVar(&clusterRepo, "cluster-repo", "ob-team-charts", "ClusterRepo to use")
 	testNewVersionCmd.MarkFlagRequired("rancher-token")
 }
 

@@ -15,7 +15,7 @@ on:
       cluster_repo:
         description: 'The ClusterRepo to use (e.g., rancher-charts, ob-team-charts)'
         required: false
-        default: 'rancher-charts'
+        default: 'ob-team-charts'
 
 jobs:
   test-monitoring:
