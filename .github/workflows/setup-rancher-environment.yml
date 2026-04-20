@@ -12,6 +12,10 @@ on:
       chart_version:
         description: 'The target chart version to test (e.g., 107.2.0+up69.8.2-rancher.20)'
         required: true
+      cluster_repo:
+        description: 'The ClusterRepo to use (e.g., rancher-charts, ob-team-charts)'
+        required: false
+        default: 'ob-team-charts'
 
 jobs:
   test-monitoring:
@@ -126,11 +130,35 @@ jobs:
           echo "token=$API_TOKEN" >> $GITHUB_OUTPUT
           echo "Successfully created and output Rancher API token."
 
+      - name: Create ob-team-charts ClusterRepo if needed
+        run: |
+          if [ "${{ github.event.inputs.cluster_repo }}" == "ob-team-charts" ]; then
+            # Check if the ClusterRepo already exists
+            if kubectl get clusterrepo ob-team-charts >/dev/null 2>&1; then
+              echo "ob-team-charts ClusterRepo already exists, skipping creation."
+            else
+              echo "Creating ob-team-charts ClusterRepo..."
+              kubectl apply -f - <<EOF
+          apiVersion: catalog.cattle.io/v1
+          kind: ClusterRepo
+          metadata:
+            name: ob-team-charts
+          spec:
+            gitBranch: main
+            gitRepo: https://github.com/rancher/ob-team-charts
+          EOF
+              echo "ob-team-charts ClusterRepo created."
+            fi
+          else
+            echo "Using ClusterRepo: ${{ github.event.inputs.cluster_repo }} (assuming it exists)"
+          fi
+
       - name: Test monitoring version
         run: |
-          echo "Waiting for rancher-charts clusterrepo to be downloaded..."
-          timeout 300s bash -c 'while [[ -z "$(kubectl get clusterrepo rancher-charts -o jsonpath='{.status.downloadTime}')" ]]; do echo -n "."; sleep 5; done'
-          echo "rancher-charts clusterrepo is ready."
+          echo "Waiting for ${{ github.event.inputs.cluster_repo }} clusterrepo to be downloaded..."
+          timeout 300s bash -c 'while [[ -z "$(kubectl get clusterrepo ${{ github.event.inputs.cluster_repo }} -o jsonpath='{.status.downloadTime}')" ]]; do echo -n "."; sleep 5; done'
+          echo "${{ github.event.inputs.cluster_repo }} clusterrepo is ready."
           ./ob-charts-tool monitoring:testNewVersion ${{ github.event.inputs.chart_version }} \
             --rancher-url ${{ steps.get-rancher-url.outputs.url }} \
-            --rancher-token ${{ steps.create-token.outputs.token }}
+            --rancher-token ${{ steps.create-token.outputs.token }} \
+            --cluster-repo ${{ github.event.inputs.cluster_repo }}

@@ -64,8 +64,8 @@ type Chart struct {
 }
 
 // GetPreviousVersion fetches the Helm index and finds the version prior to the one specified.
-func GetPreviousVersion(currentVersion, rancherURL, sessionToken string) (string, error) {
-	indexURL := fmt.Sprintf("%s/v1/catalog.cattle.io.clusterrepos/rancher-charts?link=index", rancherURL)
+func GetPreviousVersion(currentVersion, rancherURL, sessionToken, clusterRepo string) (string, error) {
+	indexURL := fmt.Sprintf("%s/v1/catalog.cattle.io.clusterrepos/%s?link=index", rancherURL, clusterRepo)
 
 	req, err := http.NewRequest("GET", indexURL, nil)
 	if err != nil {
@@ -131,8 +131,8 @@ func GetPreviousVersion(currentVersion, rancherURL, sessionToken string) (string
 }
 
 // InstallCurrentVersion installs the rancher-monitoring chart for a given version.
-func InstallCurrentVersion(chartVersion, rancherURL, sessionToken string) error {
-	url := fmt.Sprintf("%s/v1/catalog.cattle.io.clusterrepos/rancher-charts?action=install", rancherURL)
+func InstallCurrentVersion(chartVersion, rancherURL, sessionToken, clusterRepo string) error {
+	url := fmt.Sprintf("%s/v1/catalog.cattle.io.clusterrepos/%s?action=install", rancherURL, clusterRepo)
 
 	payload := InstallPayload{
 		Charts: []Chart{
@@ -148,7 +148,7 @@ func InstallCurrentVersion(chartVersion, rancherURL, sessionToken string) error 
 				ChartName:   "rancher-monitoring",
 				Version:     chartVersion,
 				ReleaseName: "rancher-monitoring",
-				Annotations: map[string]string{"catalog.cattle.io/ui-source-repo-type": "cluster", "catalog.cattle.io/ui-source-repo": "rancher-charts"},
+				Annotations: map[string]string{"catalog.cattle.io/ui-source-repo-type": "cluster", "catalog.cattle.io/ui-source-repo": clusterRepo},
 				Values: map[string]interface{}{
 					"global":               map[string]interface{}{"cattle": map[string]interface{}{"systemDefaultRegistry": "", "clusterId": "local", "clusterName": "local", "url": rancherURL}},
 					"prometheus":           map[string]interface{}{"prometheusSpec": map[string]interface{}{"resources": map[string]interface{}{"requests": map[string]interface{}{"memory": "1750Mi"}}, "retentionSize": "50GiB"}},
