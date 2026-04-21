@@ -1,12 +1,13 @@
 package static
 
 import (
-	"github.com/goccy/go-yaml/parser"
-	"github.com/sirupsen/logrus"
-	yamlv3 "gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/goccy/go-yaml/parser"
+	"github.com/sirupsen/logrus"
+	yamlv3 "gopkg.in/yaml.v3"
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"

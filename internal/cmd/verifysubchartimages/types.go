@@ -1,6 +1,6 @@
 package verifysubchartimages
 
-import "github.com/rancher/ob-charts-tool/internal/fs"
+import "github.com/rancher/ob-charts-tool/internal/filesystem"
 
 type ChartMetadata struct {
 	Dir        string `yaml:"dir"`
@@ -12,5 +12,5 @@ type ChartMetadata struct {
 type VerifyChartData struct {
 	ChartMetadata
 	FilesUsingAppVersion []string `yaml:"filesUsingAppVersion"`
-	AppVersionReferences []fs.SearchReference
+	AppVersionReferences []filesystem.SearchReference
 }

@@ -84,7 +84,7 @@ type AppVersionRuleList []AppVersionRule
 
 type AppVersionRulesMap map[MonitoringSubChartName]AppVersionRuleList
 
-var AppVersionRules AppVersionRulesMap = AppVersionRulesMap{
+var AppVersionRules = AppVersionRulesMap{
 	KubeStateMetricsSubChart: {
 		{
 			ValuesKey:   ".Values.image.tag",

@@ -2,14 +2,15 @@ package verifysubchartimages
 
 import (
 	"fmt"
-	"github.com/go-cmd/cmd"
-	"github.com/rancher/ob-charts-tool/internal/cmd/verifysubchartimages/static"
-	"github.com/rancher/ob-charts-tool/internal/fs"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/go-cmd/cmd"
+	"github.com/rancher/ob-charts-tool/internal/cmd/verifysubchartimages/static"
+	"github.com/rancher/ob-charts-tool/internal/filesystem"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 	DefaultUseAppVersionStanza = "default " + AppVersionHelmKey
 )
 
-func VerifySubchartImages(workingPath, targetVersion, packageTargetRoot string) {
+func VerifySubchartImages(workingPath, _, packageTargetRoot string) {
 	logrus.Infof("%s is clean, proceeding to `make prepare` the package", workingPath)
 	// Run make prepare to get the chart built fresh
 	err := runPrepareCommand(workingPath, packageTargetRoot)
@@ -50,7 +51,7 @@ func VerifySubchartImages(workingPath, targetVersion, packageTargetRoot string) 
 
 // DynamicVerifySubchartImages works like VerifySubchartImages but attempts to use chart analysis to identify where to update charts
 // This is extremely EXPERIMENTAL and should NOT be used as a primary tool yet; meaning Devs can use it but the Dev is responsible for results.
-func DynamicVerifySubchartImages(workingPath, targetVersion, packageTargetRoot string) {
+func DynamicVerifySubchartImages(workingPath, _, packageTargetRoot string) {
 	logrus.Infof("%s is clean, proceeding to `make prepare` the package", workingPath)
 	// Run make prepare to get the chart built fresh
 	err := runPrepareCommand(workingPath, packageTargetRoot)
@@ -62,7 +63,7 @@ func DynamicVerifySubchartImages(workingPath, targetVersion, packageTargetRoot s
 	// Find charts that refer to `.Chart.AppVersion` and use it with `default`
 	// As well as identifying where/what that is being used as a default for to inform what value tags to update
 	chartsPath := filepath.Join(packageTargetRoot)
-	subCharts, searchErr := fs.FindSubdirsWithStringInFile(chartsPath, AppVersionHelmKey)
+	subCharts, searchErr := filesystem.FindSubdirsWithStringInFile(chartsPath, AppVersionHelmKey)
 	if searchErr != nil {
 		logrus.Fatal(searchErr)
 	}
@@ -105,10 +106,10 @@ func collectChartMeta(rootPath string, subCharts []string) []ChartMetadata {
 	return chartMetas
 }
 
-func collectAppVersionRefs(rootPath string, subCharts []ChartMetadata) []VerifyChartData {
+func collectAppVersionRefs(_ string, subCharts []ChartMetadata) []VerifyChartData {
 	var appVersionRefs []VerifyChartData
 	for _, subChart := range subCharts {
-		references, err := fs.FindReferencesIn(subChart.Dir, AppVersionHelmKey)
+		references, err := filesystem.FindReferencesIn(subChart.Dir, AppVersionHelmKey)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -122,7 +123,7 @@ func collectAppVersionRefs(rootPath string, subCharts []ChartMetadata) []VerifyC
 				}
 			}
 			if len(fileListMap) > 0 {
-				for name, _ := range fileListMap {
+				for name := range fileListMap {
 					fileList = append(fileList, name)
 				}
 			}

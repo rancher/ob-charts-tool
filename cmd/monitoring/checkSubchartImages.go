@@ -2,11 +2,12 @@ package monitoring
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/rancher/ob-charts-tool/cmd/groups"
 	"github.com/rancher/ob-charts-tool/internal/cmd/verifysubchartimages"
 	"github.com/rancher/ob-charts-tool/internal/git"
-	"os"
-	"strings"
 
 	"github.com/jedib0t/go-pretty/text"
 	log "github.com/sirupsen/logrus"
@@ -62,9 +63,9 @@ func checkSubchartImagesHandler(cmd *cobra.Command, args []string) {
 			packageTargetRoot = fmt.Sprintf("%s/packages/rancher-monitoring/%s", workingPath, alternativeVersion)
 			if _, err := os.Stat(packageTargetRoot); os.IsNotExist(err) {
 				panic(fmt.Sprintf("Cannot find a monitoring package of the provided version (%s)", targetVersion))
-			} else {
-				log.Warnf("Couldn't find package version `%s`, however `%s` does exist and will be used.", targetVersion, alternativeVersion)
 			}
+
+			log.Warnf("Couldn't find package version `%s`, however `%s` does exist and will be used.", targetVersion, alternativeVersion)
 			targetVersion = alternativeVersion
 		}
 	}

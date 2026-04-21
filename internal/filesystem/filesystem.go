@@ -1,13 +1,14 @@
-package fs
+package filesystem
 
 import (
 	"bufio"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 func searchDirForString(path, search string) (bool, error) {
