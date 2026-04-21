@@ -6,6 +6,29 @@ import (
 	"github.com/go-git/go-git/v5"
 )
 
+// globalCheck prints msg, registers check globally, prints passMsg/failMsg, and returns Passed.
+func globalCheck(p *ProgressPrinter, r *VerificationResult, msg string, check CheckResult, passMsg, failMsg string) bool {
+	p.Print(msg)
+	r.AddGlobalCheck(check)
+	if check.Passed {
+		p.Println(passMsg)
+	} else {
+		p.Println(failMsg)
+	}
+	return check.Passed
+}
+
+// packageCheck prints msg, registers check on the package result, and prints passMsg/failMsg.
+func packageCheck(p *ProgressPrinter, pr *PackageResult, msg string, check CheckResult, passMsg, failMsg string) {
+	p.Print(msg)
+	pr.AddCheck(check)
+	if check.Passed {
+		p.Println(passMsg)
+	} else {
+		p.Println(failMsg)
+	}
+}
+
 // VerifyBranch takes a file path containing the ob-team-charts repo and verifies the branch state.
 // It specifically is a tool to analyze the branch not the chart itself.
 //
@@ -48,24 +71,12 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	}
 
 	// Step 2: Check upstream remote
-	progress.Print("Checking upstream repository... ")
-	upstreamCheck := CheckHasObTeamChartsRemote(repo)
-	result.AddGlobalCheck(upstreamCheck)
-	if !upstreamCheck.Passed {
-		progress.Println("FAILED")
-	} else {
-		progress.Println("OK")
-	}
+	globalCheck(progress, result, "Checking upstream repository... ", CheckHasObTeamChartsRemote(repo), "OK", "FAILED")
 
 	// Step 3: Check branch status (not on main/master)
-	progress.Print("Checking branch status... ")
 	branchName, branchCheck := CheckOnFeatureBranch(repo)
-	result.AddGlobalCheck(branchCheck)
-	if !branchCheck.Passed {
-		progress.Println("FAILED")
-	} else {
-		progress.Printf("OK (on branch '%s')\n", branchName)
-	}
+	globalCheck(progress, result, "Checking branch status... ", branchCheck,
+		fmt.Sprintf("OK (on branch '%s')", branchName), "FAILED")
 
 	// Step 4: Get git refs (ensures upstream remote, fetches, finds merge-base)
 	progress.Print("Setting up upstream remote and fetching... ")
@@ -87,20 +98,12 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	progress.Println("OK")
 
 	// Step 5: Check if branch is current with upstream
-	progress.Print("Checking if branch is current with upstream... ")
 	branchInfo, currentCheck := CheckBranchCurrent(refs, repo)
-	result.AddGlobalCheck(currentCheck)
-	if !currentCheck.Passed {
-		if branchInfo.CommitsBehind != 0 {
-			progress.Println(
-				fmt.Sprintf("WARN - Branch is %d commit(s) behind main", branchInfo.CommitsBehind),
-			)
-		} else {
-			progress.Println("WARN - Branch is behind main")
-		}
-	} else {
-		progress.Println("OK")
+	behindMsg := "WARN - Branch is behind main"
+	if branchInfo.CommitsBehind != 0 {
+		behindMsg = fmt.Sprintf("WARN - Branch is %d commit(s) behind main", branchInfo.CommitsBehind)
 	}
+	globalCheck(progress, result, "Checking if branch is current with upstream... ", currentCheck, "OK", behindMsg)
 
 	// Step 6: Find modified packages
 	progress.Print("Finding modified packages... ")
@@ -120,40 +123,18 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	for _, pkg := range packages {
 		pkgResult := result.GetOrCreatePackageResult(pkg)
 
-		// Check sequential versioning
-		progress.Printf("Checking sequential version for %s... ", pkg.FullPath)
-		versionCheck := CheckSequentialVersion(path, pkg)
-		pkgResult.AddCheck(versionCheck)
-		if versionCheck.Passed {
-			progress.Println("OK")
-		} else {
-			progress.Println("FAILED")
-		}
-
-		// Check that chart has been built
-		progress.Printf("Checking chart built for %s... ", pkg.FullPath)
-		chartCheck := CheckChartBuilt(path, pkg)
-		pkgResult.AddCheck(chartCheck)
-		if chartCheck.Passed {
-			progress.Println("OK")
-		} else {
-			progress.Println("FAILED")
-		}
+		packageCheck(progress, pkgResult, fmt.Sprintf("Checking sequential version for %s... ", pkg.FullPath),
+			CheckSequentialVersion(path, pkg), "OK", "FAILED")
+		packageCheck(progress, pkgResult, fmt.Sprintf("Checking chart built for %s... ", pkg.FullPath),
+			CheckChartBuilt(path, pkg), "OK", "FAILED")
 	}
 
 	// ============================================
 	// GLOBAL CHECK - Repository cleanliness before build
 	// ============================================
 
-	progress.Print("Checking repository is clean before build... ")
-	cleanCheck := CheckRepoClean(repo)
-	result.AddGlobalCheck(cleanCheck)
-	repoIsClean := cleanCheck.Passed
-	if !repoIsClean {
-		progress.Println("DIRTY (skipping build checks)")
-	} else {
-		progress.Println("OK")
-	}
+	repoIsClean := globalCheck(progress, result, "Checking repository is clean before build... ",
+		CheckRepoClean(repo), "OK", "DIRTY (skipping build checks)")
 
 	// ============================================
 	// PER-PACKAGE CHECK - Build verification (only if repo was clean)
@@ -163,32 +144,12 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 		for _, pkg := range packages {
 			pkgResult := result.GetOrCreatePackageResult(pkg)
 
-			progress.Printf("Running build check for %s (this may take a while)... ", pkg.FullPath)
-			buildCheck := CheckBuildNoChanges(path, pkg)
-			pkgResult.AddCheck(buildCheck)
-			if buildCheck.Passed {
-				progress.Println("OK")
-			} else {
-				progress.Println("FAILED")
-			}
-
-			progress.Printf("Running package image check for %s (this may take a while)... ", pkg.FullPath)
-			imagesCheck := CheckPackageImages(path, pkg)
-			pkgResult.AddCheck(imagesCheck)
-			if imagesCheck.Passed {
-				progress.Println("OK")
-			} else {
-				progress.Println("FAILED")
-			}
-
-			progress.Printf("Checking subchart appVersion tags for %s... ", pkg.FullPath)
-			subchartCheck := CheckSubchartAppVersionTags(path, pkg)
-			pkgResult.AddCheck(subchartCheck)
-			if subchartCheck.Passed {
-				progress.Println("OK")
-			} else {
-				progress.Println("WARN")
-			}
+			packageCheck(progress, pkgResult, fmt.Sprintf("Running build check for %s (this may take a while)... ", pkg.FullPath),
+				CheckBuildNoChanges(path, pkg), "OK", "FAILED")
+			packageCheck(progress, pkgResult, fmt.Sprintf("Running package image check for %s (this may take a while)... ", pkg.FullPath),
+				CheckPackageImages(path, pkg), "OK", "FAILED")
+			packageCheck(progress, pkgResult, fmt.Sprintf("Checking subchart appVersion tags for %s... ", pkg.FullPath),
+				CheckSubchartAppVersionTags(path, pkg), "OK", "WARN")
 		}
 	}
 
