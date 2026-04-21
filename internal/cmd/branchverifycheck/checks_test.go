@@ -799,20 +799,30 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		}
 	})
 
-	t.Run("kube-state-metrics: correct v prefix on both rules", func(t *testing.T) {
+	t.Run("kube-state-metrics: correct v prefix on both image.tag and kubeRBACProxy.image.tag", func(t *testing.T) {
 		repoPath, pkg := setupMon(t)
 		setupSubchart(t, subchartsDir(repoPath), "kube-state-metrics", "2.10.0",
 			"image:\n  tag: \"v2.10.0\"\nkubeRBACProxy:\n  image:\n    tag: \"v2.10.0\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
 		if !result.Passed {
-			t.Errorf("should pass for kube-state-metrics with correct v prefix: %s", result.Message)
+			t.Errorf("should pass for kube-state-metrics with correct v prefix on both tags: %s", result.Message)
+		}
+	})
+
+	t.Run("kube-state-metrics: wrong kubeRBACProxy.image.tag caught", func(t *testing.T) {
+		repoPath, pkg := setupMon(t)
+		setupSubchart(t, subchartsDir(repoPath), "kube-state-metrics", "2.10.0",
+			"image:\n  tag: \"v2.10.0\"\nkubeRBACProxy:\n  image:\n    tag: \"0.20.1-16.14\"\n")
+		result := CheckSubchartAppVersionTags(repoPath, pkg)
+		if result.Passed {
+			t.Errorf("should fail when kube-state-metrics kubeRBACProxy.image.tag does not match appVersion")
 		}
 	})
 
 	t.Run("kube-state-metrics: missing v prefix", func(t *testing.T) {
 		repoPath, pkg := setupMon(t)
 		setupSubchart(t, subchartsDir(repoPath), "kube-state-metrics", "2.10.0",
-			"image:\n  tag: \"2.10.0\"\nkubeRBACProxy:\n  image:\n    tag: \"v2.10.0\"\n")
+			"image:\n  tag: \"2.10.0\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
 		if result.Passed {
 			t.Errorf("should fail when kube-state-metrics image.tag is missing v prefix")

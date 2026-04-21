@@ -28,6 +28,36 @@ func TestNormalizeName(t *testing.T) {
 	}
 }
 
+func TestTagMatchesExpected(t *testing.T) {
+	cases := []struct {
+		actual   string
+		expected string
+		want     bool
+	}{
+		{"v2.10.0", "v2.10.0", true},           // exact match
+		{"v2.10.0-1", "v2.10.0", true},         // appCo single-digit revision
+		{"v2.10.0-14", "v2.10.0", true},        // appCo multi-digit revision
+		{"10.0.0-3.14", "10.0.0", true},        // non-v-prefixed with revision
+		{"2.17.0-10.11", "v2.17.0", true},      // appCo: no-v actual, v-prefixed expected
+		{"2.17.0", "v2.17.0", true},            // appCo: no-v actual, v-prefixed expected, no revision
+		{"v2.10.0", "v2.10.0-1", false},        // expected has suffix, actual does not
+		{"v2.11.0", "v2.10.0", false},          // different version
+		{"0.20.1-16.14", "v2.17.0", false},     // unrelated version
+		{"v2.10.0-alpha", "v2.10.0", true},     // non-numeric suffix also accepted
+		{"v2.10.0something", "v2.10.0", false}, // suffix without dash not accepted
+		{"", "", true},                         // both empty
+		{"v2.10.0-1", "v2.10", false},          // partial prefix not accepted
+	}
+	for _, tc := range cases {
+		t.Run(tc.actual+"_vs_"+tc.expected, func(t *testing.T) {
+			got := TagMatchesExpected(tc.actual, tc.expected)
+			if got != tc.want {
+				t.Errorf("TagMatchesExpected(%q, %q) = %v, want %v", tc.actual, tc.expected, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestSubchartRule_Apply(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -77,19 +107,17 @@ func TestGetRules(t *testing.T) {
 		if len(rules) != 2 {
 			t.Fatalf("GetRules(kube-state-metrics) returned %d rules, want 2", len(rules))
 		}
-		keys := []string{rules[0].ValuesKey, rules[1].ValuesKey}
-		wantKeys := map[string]bool{"image.tag": true, "kubeRBACProxy.image.tag": true}
-		for _, k := range keys {
-			if !wantKeys[k] {
-				t.Errorf("unexpected rule key %q", k)
-			}
+		if rules[0].ValuesKey != "image.tag" {
+			t.Errorf("GetRules(kube-state-metrics)[0].ValuesKey = %q, want image.tag", rules[0].ValuesKey)
 		}
-		// Both rules should have a PrepareFunc that adds "v"
-		for _, r := range rules {
-			got := r.Apply("2.0.0")
-			if got != "v2.0.0" {
-				t.Errorf("kube-state-metrics rule.Apply(2.0.0) = %q, want v2.0.0", got)
-			}
+		if got := rules[0].Apply("2.0.0"); got != "v2.0.0" {
+			t.Errorf("kube-state-metrics rules[0].Apply(2.0.0) = %q, want v2.0.0", got)
+		}
+		if rules[1].ValuesKey != "kubeRBACProxy.image.tag" {
+			t.Errorf("GetRules(kube-state-metrics)[1].ValuesKey = %q, want kubeRBACProxy.image.tag", rules[1].ValuesKey)
+		}
+		if got := rules[1].Apply("2.0.0"); got != "v2.0.0" {
+			t.Errorf("kube-state-metrics rules[1].Apply(2.0.0) = %q, want v2.0.0", got)
 		}
 	})
 
@@ -272,6 +300,23 @@ func TestCheckTagsInValues(t *testing.T) {
 			wantExpected:   "10.0.0",
 		},
 		{
+			name:           "grafana: appCo revision suffix accepted",
+			normalizedName: "grafana",
+			appVersion:     "10.0.0",
+			values:         map[string]any{"image": map[string]any{"tag": "10.0.0-3.14"}},
+			wantMismatches: 0,
+		},
+		{
+			name:           "kube-state-metrics: appCo no-v tag with revision accepted",
+			normalizedName: "kube-state-metrics",
+			appVersion:     "2.17.0",
+			values: map[string]any{
+				"image":         map[string]any{"tag": "2.17.0-10.11"},
+				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.17.0"}},
+			},
+			wantMismatches: 0,
+		},
+		{
 			name:           "grafana: missing tag key",
 			normalizedName: "grafana",
 			appVersion:     "10.0.0",
@@ -290,43 +335,51 @@ func TestCheckTagsInValues(t *testing.T) {
 			wantActual:     "(not found)",
 		},
 		{
-			name:           "kube-state-metrics: both tags correct",
+			// After v-normalization "2.10.0" matches "v2.10.0"; only kubeRBACProxy is absent.
+			name:           "kube-state-metrics: no-v image.tag passes, missing kubeRBACProxy fails",
+			normalizedName: "kube-state-metrics",
+			appVersion:     "2.10.0",
+			values:         map[string]any{"image": map[string]any{"tag": "2.10.0"}},
+			wantMismatches: 1,
+			wantKey:        "kubeRBACProxy.image.tag",
+			wantActual:     "(not found)",
+			wantExpected:   "v2.10.0",
+		},
+		{
+			name:           "kube-state-metrics: completely wrong image.tag version",
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.10.0",
 			values: map[string]any{
-				"image": map[string]any{"tag": "v2.10.0"},
-				"kubeRBACProxy": map[string]any{
-					"image": map[string]any{"tag": "v2.10.0"},
-				},
+				"image":         map[string]any{"tag": "1.0.0"},
+				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.10.0"}},
+			},
+			wantMismatches: 1,
+			wantKey:        "image.tag",
+			wantActual:     "1.0.0",
+			wantExpected:   "v2.10.0",
+		},
+		{
+			name:           "kube-state-metrics: both tags correct with v prefix",
+			normalizedName: "kube-state-metrics",
+			appVersion:     "2.10.0",
+			values: map[string]any{
+				"image":         map[string]any{"tag": "v2.10.0"},
+				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.10.0"}},
 			},
 			wantMismatches: 0,
 		},
 		{
-			name:           "kube-state-metrics: missing v prefix on image.tag",
+			name:           "kube-state-metrics: kubeRBACProxy tag mismatch is caught",
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.10.0",
 			values: map[string]any{
-				"image": map[string]any{"tag": "2.10.0"},
-				"kubeRBACProxy": map[string]any{
-					"image": map[string]any{"tag": "v2.10.0"},
-				},
+				"image":         map[string]any{"tag": "v2.10.0"},
+				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "0.20.1-16.14"}},
 			},
 			wantMismatches: 1,
-			wantKey:        "image.tag",
-			wantActual:     "2.10.0",
+			wantKey:        "kubeRBACProxy.image.tag",
+			wantActual:     "0.20.1-16.14",
 			wantExpected:   "v2.10.0",
-		},
-		{
-			name:           "kube-state-metrics: both tags wrong",
-			normalizedName: "kube-state-metrics",
-			appVersion:     "2.10.0",
-			values: map[string]any{
-				"image": map[string]any{"tag": "v1.0.0"},
-				"kubeRBACProxy": map[string]any{
-					"image": map[string]any{"tag": "v1.0.0"},
-				},
-			},
-			wantMismatches: 2,
 		},
 		{
 			name:           "node-exporter: uses DefaultRules, matching",

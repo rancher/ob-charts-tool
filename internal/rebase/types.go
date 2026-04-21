@@ -40,6 +40,16 @@ type ChartRebaseInfo struct {
 	ChartDependencies       []ChartDep                      `yaml:"chart_dependencies"`
 	DependencyChartVersions []DependencyChartVersion        `yaml:"dependency_chart_versions"`
 	ChartsImagesLists       map[string]util.Set[ChartImage] `yaml:"charts_images_lists"`
+	SubchartTagExpectations []SubchartTagExpectation        `yaml:"subchart_tag_expectations,omitempty"`
+}
+
+// SubchartTagExpectation holds the expected image tag values for a tracked subchart,
+// derived from its upstream Chart.yaml appVersion. These are the values a developer
+// must set in their Rancher chart patches after a rebase.
+type SubchartTagExpectation struct {
+	Name         string            `yaml:"name"`
+	AppVersion   string            `yaml:"app_version"`
+	ExpectedTags map[string]string `yaml:"expected_tags"` // values.yaml path → expected value
 }
 
 type DependencyChartVersion struct {

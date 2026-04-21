@@ -10,7 +10,6 @@ import (
 
 	"github.com/rancher/ob-charts-tool/cmd/groups"
 	"github.com/rancher/ob-charts-tool/internal/cmd/rebaseinfo"
-	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
 	"github.com/rancher/ob-charts-tool/internal/rebase"
 )
 
@@ -57,16 +56,18 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 	log.Debug(rebaseInfoState)
 	fmt.Println("Rebase information has been collected and will be saved to `rebase.yaml` file.")
 
+	rebaseInfoState.PopulateSubchartTagExpectations()
 	savedRebaseInfoFilePath := rebaseInfoState.SaveStateToRebaseYaml(cwd)
 	fmt.Println(fmt.Sprintf("The rebase information is saved at: %s", savedRebaseInfoFilePath))
 
 	printSubchartChecklist(rebaseInfoState)
 }
 
-// printSubchartChecklist prints a checklist of values.yaml entries to verify when rebasing,
-// derived from the upstream chart's dependency appVersions.
+// printSubchartChecklist prints the pre-computed subchart tag expectations to the console
+// so developers know which values.yaml entries need updating in their Rancher chart patches.
+// The same data is already saved to rebase.yaml via PopulateSubchartTagExpectations.
 func printSubchartChecklist(info rebase.ChartRebaseInfo) {
-	if len(info.DependencyChartVersions) == 0 {
+	if len(info.SubchartTagExpectations) == 0 {
 		return
 	}
 
@@ -75,18 +76,10 @@ func printSubchartChecklist(info rebase.ChartRebaseInfo) {
 		text.Color.Sprintf(text.FgYellow, "Subchart values.yaml tag checklist (verify these in your Rancher chart patches):"),
 	)
 
-	for _, dep := range info.DependencyChartVersions {
-		normalized := monsubcharts.NormalizeName(dep.Name)
-		if !monsubcharts.SubchartsToCheck[normalized] {
-			continue
-		}
-		if dep.AppVersion == "" {
-			continue
-		}
-
-		fmt.Printf("  %s (appVersion: %s):\n", dep.Name, dep.AppVersion)
-		for _, rule := range monsubcharts.GetRules(normalized) {
-			fmt.Printf("    → %s: %s\n", rule.ValuesKey, rule.Apply(dep.AppVersion))
+	for _, exp := range info.SubchartTagExpectations {
+		fmt.Printf("  %s (appVersion: %s):\n", exp.Name, exp.AppVersion)
+		for key, val := range exp.ExpectedTags {
+			fmt.Printf("    → %s: %s\n", key, val)
 		}
 	}
 	fmt.Println("")

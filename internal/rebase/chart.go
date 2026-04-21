@@ -240,6 +240,28 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 	}
 }
 
+// PopulateSubchartTagExpectations computes the expected image tag values for all
+// tracked subcharts and stores them on the struct so they are included in rebase.yaml.
+// Call this before SaveStateToRebaseYaml.
+func (s *ChartRebaseInfo) PopulateSubchartTagExpectations() {
+	s.SubchartTagExpectations = nil
+	for _, dep := range s.DependencyChartVersions {
+		normalized := monsubcharts.NormalizeName(dep.Name)
+		if !monsubcharts.SubchartsToCheck[normalized] || dep.AppVersion == "" {
+			continue
+		}
+		expectation := SubchartTagExpectation{
+			Name:         dep.Name,
+			AppVersion:   dep.AppVersion,
+			ExpectedTags: make(map[string]string),
+		}
+		for _, rule := range monsubcharts.GetRules(normalized) {
+			expectation.ExpectedTags[rule.ValuesKey] = rule.Apply(dep.AppVersion)
+		}
+		s.SubchartTagExpectations = append(s.SubchartTagExpectations, expectation)
+	}
+}
+
 func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) string {
 	yamlData, err := yaml.Marshal(s)
 	if err != nil {

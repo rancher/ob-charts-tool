@@ -30,6 +30,9 @@ var DefaultRules = []SubchartRule{
 // SubchartRules maps normalized subchart names (without "rancher-" prefix) to their rules.
 // Subcharts not listed here use DefaultRules.
 var SubchartRules = map[string][]SubchartRule{
+	// kube-state-metrics: both the main image and kubeRBACProxy fall back to
+	// `v{.Chart.AppVersion}` in the chart's helpers template when .Values.*.image.tag
+	// is empty, so Rancher patches must explicitly set both to the appVersion with a "v" prefix.
 	"kube-state-metrics": {
 		{ValuesKey: "image.tag", PrepareFunc: func(v string) string { return "v" + v }},
 		{ValuesKey: "kubeRBACProxy.image.tag", PrepareFunc: func(v string) string { return "v" + v }},
@@ -67,8 +70,26 @@ type TagMismatch struct {
 	ExpectedValue string
 }
 
+// TagMatchesExpected reports whether actual satisfies expected, allowing for appCo image tag
+// conventions: a leading "v" may be absent from the actual tag, and an appCo build-revision
+// suffix (e.g. "-10.11") may be appended.
+//
+// Examples that match:
+//
+//	actual="v2.10.0"      expected="v2.10.0"   → exact match
+//	actual="v2.10.0-1"   expected="v2.10.0"   → revision suffix
+//	actual="2.10.0-10.11" expected="v2.10.0"  → no-v + revision suffix (appCo style)
+func TagMatchesExpected(actual, expected string) bool {
+	norm := strings.TrimPrefix
+	a := norm(actual, "v")
+	e := norm(expected, "v")
+	return a == e || strings.HasPrefix(a, e+"-")
+}
+
 // CheckTagsInValues inspects a parsed values.yaml map for a given subchart and appVersion,
 // returning any keys whose value does not match the rule's expected tag.
+// Actual values may carry an appCo build-revision suffix (e.g. "v2.10.0-1") and are still
+// considered matching.
 func CheckTagsInValues(normalizedName, appVersion string, values map[string]interface{}) []TagMismatch {
 	var mismatches []TagMismatch
 	for _, rule := range GetRules(normalizedName) {
@@ -82,7 +103,7 @@ func CheckTagsInValues(normalizedName, appVersion string, values map[string]inte
 			})
 			continue
 		}
-		if actual != expected {
+		if !TagMatchesExpected(actual, expected) {
 			mismatches = append(mismatches, TagMismatch{
 				ValuesKey:     rule.ValuesKey,
 				ActualValue:   actual,
