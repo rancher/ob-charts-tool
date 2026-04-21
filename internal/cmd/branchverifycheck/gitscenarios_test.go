@@ -260,7 +260,7 @@ func TestCheckBranchCurrent(t *testing.T) {
 		base := m.commit(t, map[string]string{"README.md": "# repo\n"}, "shared base")
 
 		refs := m.buildRefs(t, base, base, base,
-			"refs/heads/my-feature", "refs/remotes/upstream/main")
+			"refs/heads/fix/my-fix", "refs/remotes/upstream/master")
 
 		info, result := CheckBranchCurrent(refs, m.repo)
 

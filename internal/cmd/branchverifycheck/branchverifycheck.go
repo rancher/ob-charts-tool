@@ -18,12 +18,14 @@ func globalCheck(p *ProgressPrinter, r *VerificationResult, msg string, check Ch
 	return check.Passed
 }
 
-// packageCheck prints msg, registers check on the package result, and prints passMsg/failMsg.
-func packageCheck(p *ProgressPrinter, pr *PackageResult, msg string, check CheckResult, passMsg, failMsg string) {
+// packageCheck prints msg, registers check on the package result, and prints the outcome.
+// On pass, prints "OK - <check.Message>" so developers see a brief status without needing JSON output.
+// On fail, prints failMsg (e.g. "FAILED" or "WARN").
+func packageCheck(p *ProgressPrinter, pr *PackageResult, msg string, check CheckResult, failMsg string) {
 	p.Print(msg)
 	pr.AddCheck(check)
 	if check.Passed {
-		p.Println(passMsg)
+		p.Println("OK - " + check.Message)
 	} else {
 		p.Println(failMsg)
 	}
@@ -124,9 +126,9 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 		pkgResult := result.GetOrCreatePackageResult(pkg)
 
 		packageCheck(progress, pkgResult, fmt.Sprintf("Checking sequential version for %s... ", pkg.FullPath),
-			CheckSequentialVersion(path, pkg), "OK", "FAILED")
+			CheckSequentialVersion(path, pkg), "FAILED")
 		packageCheck(progress, pkgResult, fmt.Sprintf("Checking chart built for %s... ", pkg.FullPath),
-			CheckChartBuilt(path, pkg), "OK", "FAILED")
+			CheckChartBuilt(path, pkg), "FAILED")
 	}
 
 	// ============================================
@@ -145,11 +147,11 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 			pkgResult := result.GetOrCreatePackageResult(pkg)
 
 			packageCheck(progress, pkgResult, fmt.Sprintf("Running build check for %s (this may take a while)... ", pkg.FullPath),
-				CheckBuildNoChanges(path, pkg), "OK", "FAILED")
+				CheckBuildNoChanges(path, pkg), "FAILED")
 			packageCheck(progress, pkgResult, fmt.Sprintf("Running package image check for %s (this may take a while)... ", pkg.FullPath),
-				CheckPackageImages(path, pkg), "OK", "FAILED")
+				CheckPackageImages(path, pkg), "FAILED")
 			packageCheck(progress, pkgResult, fmt.Sprintf("Checking subchart appVersion tags for %s... ", pkg.FullPath),
-				CheckSubchartAppVersionTags(path, pkg), "OK", "WARN")
+				CheckSubchartAppVersionTags(path, pkg), "WARN")
 		}
 	}
 
