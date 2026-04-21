@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
 	gitpkg "github.com/rancher/ob-charts-tool/internal/git"
+	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
 	"gopkg.in/yaml.v3"
 )
 
@@ -662,6 +663,98 @@ func isImageDefinition(m map[string]interface{}) bool {
 	_, hasRepository := m["repository"]
 	_, hasTag := m["tag"]
 	return hasRepository && hasTag
+}
+
+// CheckSubchartAppVersionTags verifies that subchart values.yaml image tags match each subchart's Chart.yaml appVersion.
+// This check only applies to rancher-monitoring packages and is non-critical (soft fail / warning).
+func CheckSubchartAppVersionTags(repoPath string, pkg PackageInfo) CheckResult {
+	check := CheckResult{
+		Name:     fmt.Sprintf("Subchart AppVersion Tags (%s)", pkg.FullPath),
+		Critical: false,
+	}
+
+	if pkg.Name != "rancher-monitoring" {
+		check.Passed = true
+		check.Message = "Not a rancher-monitoring package; subchart tag check skipped"
+		return check
+	}
+
+	info, err := getPackageVersionInfo(repoPath, pkg)
+	if err != nil {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Failed to get package info: %v", err)
+		return check
+	}
+
+	chartsSubDir := filepath.Join(repoPath, "charts", pkg.Name, info.Version, "charts")
+	entries, err := os.ReadDir(chartsSubDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			check.Passed = true
+			check.Message = "No charts/ subdirectory found in built chart; skipping"
+			return check
+		}
+		check.Passed = false
+		check.Message = fmt.Sprintf("Failed to read charts/ subdirectory: %v", err)
+		return check
+	}
+
+	var mismatches []SubchartTagMismatch
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		dirName := entry.Name()
+		normalizedName := monsubcharts.NormalizeName(dirName)
+		if !monsubcharts.SubchartsToCheck[normalizedName] {
+			continue
+		}
+
+		subchartPath := filepath.Join(chartsSubDir, dirName)
+
+		// Read Chart.yaml to get appVersion
+		chartYAMLBytes, readErr := os.ReadFile(filepath.Join(subchartPath, "Chart.yaml"))
+		if readErr != nil {
+			continue
+		}
+		var chartMeta struct {
+			AppVersion string `yaml:"appVersion"`
+		}
+		if unmarshalErr := yaml.Unmarshal(chartYAMLBytes, &chartMeta); unmarshalErr != nil || chartMeta.AppVersion == "" {
+			continue
+		}
+
+		// Read values.yaml
+		valuesBytes, readErr := os.ReadFile(filepath.Join(subchartPath, "values.yaml"))
+		if readErr != nil {
+			continue
+		}
+		var valuesData map[string]interface{}
+		if unmarshalErr := yaml.Unmarshal(valuesBytes, &valuesData); unmarshalErr != nil {
+			continue
+		}
+
+		for _, m := range monsubcharts.CheckTagsInValues(normalizedName, chartMeta.AppVersion, valuesData) {
+			mismatches = append(mismatches, SubchartTagMismatch{
+				SubchartName:  dirName,
+				ValuesKey:     m.ValuesKey,
+				ActualValue:   m.ActualValue,
+				ExpectedValue: m.ExpectedValue,
+			})
+		}
+	}
+
+	if len(mismatches) > 0 {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Found %d subchart image tag mismatch(es) — values.yaml does not reflect Chart.yaml appVersion", len(mismatches))
+		check.Details = &SubchartTagCheckDetails{Mismatches: mismatches}
+		return check
+	}
+
+	check.Passed = true
+	check.Message = "All monitored subchart image tags match their Chart.yaml appVersion"
+	return check
 }
 
 // validateImageDefinition checks if an image definition meets the requirements:

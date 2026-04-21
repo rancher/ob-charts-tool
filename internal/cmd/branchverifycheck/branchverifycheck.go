@@ -180,6 +180,15 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 			} else {
 				progress.Println("FAILED")
 			}
+
+			progress.Printf("Checking subchart appVersion tags for %s... ", pkg.FullPath)
+			subchartCheck := CheckSubchartAppVersionTags(path, pkg)
+			pkgResult.AddCheck(subchartCheck)
+			if subchartCheck.Passed {
+				progress.Println("OK")
+			} else {
+				progress.Println("WARN")
+			}
 		}
 	}
 

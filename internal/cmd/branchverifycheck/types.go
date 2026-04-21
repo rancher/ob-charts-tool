@@ -189,3 +189,28 @@ func (d *ImageCheckDetails) Format() string {
 	}
 	return sb.String()
 }
+
+// SubchartTagMismatch represents a mismatch between a subchart's Chart.yaml appVersion and its values.yaml image tag
+type SubchartTagMismatch struct {
+	SubchartName  string `json:"subchartName"`
+	ValuesKey     string `json:"valuesKey"`
+	ActualValue   string `json:"actualValue"`
+	ExpectedValue string `json:"expectedValue"`
+}
+
+// SubchartTagCheckDetails contains details about subchart image tag mismatches
+type SubchartTagCheckDetails struct {
+	Mismatches []SubchartTagMismatch `json:"mismatches"`
+}
+
+// Format returns a formatted string representation of the subchart tag check details
+func (d *SubchartTagCheckDetails) Format() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Found %d subchart image tag mismatch(es):\n\n", len(d.Mismatches)))
+	for _, m := range d.Mismatches {
+		sb.WriteString(fmt.Sprintf("  • %s: %s\n", m.SubchartName, m.ValuesKey))
+		sb.WriteString(fmt.Sprintf("    actual:   %s\n", m.ActualValue))
+		sb.WriteString(fmt.Sprintf("    expected: %s\n", m.ExpectedValue))
+	}
+	return sb.String()
+}

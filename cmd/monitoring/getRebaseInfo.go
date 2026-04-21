@@ -10,13 +10,15 @@ import (
 
 	"github.com/rancher/ob-charts-tool/cmd/groups"
 	"github.com/rancher/ob-charts-tool/internal/cmd/rebaseinfo"
+	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
+	"github.com/rancher/ob-charts-tool/internal/rebase"
 )
 
 // getRebaseInfoCmd represents the getRebaseInfo command
 var getRebaseInfoCmd = &cobra.Command{
 	Use:     "getRebaseInfo",
-	Short:   "Collect the basic information about a potential rebase target version",
 	GroupID: groups.MonitoringGroup.ID,
+	Short:   "Collect the basic information about a potential rebase target version",
 	Args: func(_ *cobra.Command, args []string) error {
 		// Check if there's one argument provided
 		if len(args) == 1 {
@@ -57,4 +59,35 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 
 	savedRebaseInfoFilePath := rebaseInfoState.SaveStateToRebaseYaml(cwd)
 	fmt.Println(fmt.Sprintf("The rebase information is saved at: %s", savedRebaseInfoFilePath))
+
+	printSubchartChecklist(rebaseInfoState)
+}
+
+// printSubchartChecklist prints a checklist of values.yaml entries to verify when rebasing,
+// derived from the upstream chart's dependency appVersions.
+func printSubchartChecklist(info rebase.ChartRebaseInfo) {
+	if len(info.DependencyChartVersions) == 0 {
+		return
+	}
+
+	fmt.Println("")
+	fmt.Println(
+		text.Color.Sprintf(text.FgYellow, "Subchart values.yaml tag checklist (verify these in your Rancher chart patches):"),
+	)
+
+	for _, dep := range info.DependencyChartVersions {
+		normalized := monsubcharts.NormalizeName(dep.Name)
+		if !monsubcharts.SubchartsToCheck[normalized] {
+			continue
+		}
+		if dep.AppVersion == "" {
+			continue
+		}
+
+		fmt.Printf("  %s (appVersion: %s):\n", dep.Name, dep.AppVersion)
+		for _, rule := range monsubcharts.GetRules(normalized) {
+			fmt.Printf("    → %s: %s\n", rule.ValuesKey, rule.Apply(dep.AppVersion))
+		}
+	}
+	fmt.Println("")
 }
