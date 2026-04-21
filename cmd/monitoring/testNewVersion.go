@@ -101,20 +101,6 @@ func testVersion(version, rancherURL, sessionToken, clusterRepo string) (map[str
 	return allResults, nil
 }
 
-// uninstallChart is a helper to uninstall both monitoring charts.
-func uninstallChart(version, rancherURL, sessionToken string) error {
-	fmt.Printf("Uninstalling rancher-monitoring for version %s...\n", version)
-	if err := monitoringTest.UninstallChart("rancher-monitoring", "cattle-monitoring-system", rancherURL, sessionToken); err != nil {
-		return fmt.Errorf("failed to uninstall rancher-monitoring: %w", err)
-	}
-	fmt.Println("Uninstalling rancher-monitoring-crd...")
-	if err := monitoringTest.UninstallChart("rancher-monitoring-crd", "cattle-monitoring-system", rancherURL, sessionToken); err != nil {
-		return fmt.Errorf("failed to uninstall rancher-monitoring-crd: %w", err)
-	}
-	fmt.Println("Uninstallation complete.")
-	return nil
-}
-
 // compareResults analyzes the test outcomes and prints any regressions or fixes.
 func compareResults(prevResults, newResults map[string][]monitoringTest.PanelTestResult) error {
 	regressionsFound := 0
