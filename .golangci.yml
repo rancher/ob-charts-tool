@@ -1,0 +1,32 @@
+version: "2"
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - unused
+    - unparam
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - internal/util
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
