@@ -17,6 +17,12 @@ on:
         required: false
         default: 'ob-team-charts'
 
+env:
+  K3S_VERSION: "${{ github.event.inputs.k3s_version }}"
+  RANCHER_VERSION: "${{ github.event.inputs.rancher_version }}"
+  CHART_VERSION: "${{ github.event.inputs.chart_version }}"
+  CLUSTER_REPO: "${{ github.event.inputs.cluster_repo }}"
+
 jobs:
   test-monitoring:
     runs-on: ubuntu-latest
@@ -28,6 +34,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Build workflow inputs summary
+        run: bash -c ./scripts/ci-summary
+
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
@@ -38,7 +47,7 @@ jobs:
 
       - name: Install k3s
         run: |
-          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${{ github.event.inputs.k3s_version }} sh -
+          curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${K3S_VERSION} sh -
           sudo chmod 644 /etc/rancher/k3s/k3s.yaml
           mkdir -p $HOME/.kube
           sudo cp /etc/rancher/k3s/k3s.yaml $HOME/.kube/config
@@ -50,7 +59,12 @@ jobs:
       - name: Install cert-manager
         run: |
           helm repo add jetstack https://charts.jetstack.io
-          helm install cert-manager jetstack/cert-manager --namespace cert-manager     --version v1.13.0    --set installCRDs=true --wait --create-namespace 
+          helm install cert-manager jetstack/cert-manager \
+            --namespace cert-manager \
+            --version v1.13.0 \
+            --set installCRDs=true \
+            --wait \
+            --create-namespace
           echo "cert-manager is ready."
 
       - name: Get Node IP and set Rancher URL
@@ -63,16 +77,24 @@ jobs:
 
       - name: Install Rancher
         run: |
-          helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
-          helm repo update
+          if [[ "${RANCHER_VERSION}" == *"alpha"* ]]; then
+            HELM_REPO_NAME="rancher-alpha"
+            HELM_REPO_URL="https://releases.rancher.com/server-charts/alpha"
+          else
+            HELM_REPO_NAME="rancher-latest"
+            HELM_REPO_URL="https://releases.rancher.com/server-charts/latest"
+          fi
+
+          echo "Adding helm repo with name ${HELM_REPO_NAME} and url ${HELM_REPO_URL}"
+          helm repo add "${HELM_REPO_NAME}" "${HELM_REPO_URL}"
           kubectl create namespace cattle-system
-          echo "Installing Rancher version ${{ github.event.inputs.rancher_version }}..."
-          helm install rancher rancher-latest/rancher \
+          echo "Installing Rancher version ${RANCHER_VERSION}..."
+          helm install rancher "${HELM_REPO_NAME}/rancher" \
             --namespace cattle-system \
             --set hostname=$(echo ${{ steps.get-rancher-url.outputs.url }} | sed 's|https://||') \
             --set bootstrapPassword=admin \
             --set replicas=1 \
-            --version ${{ github.event.inputs.rancher_version }}
+            --version ${RANCHER_VERSION}
           echo "Waiting for Rancher deployment to be ready..."
           kubectl wait --for=condition=ready pod -l app=rancher -n cattle-system --timeout=600s
           echo "Rancher deployment is ready."
@@ -105,7 +127,7 @@ jobs:
             '${{ steps.get-rancher-url.outputs.url }}/v3-public/localProviders/local?action=login' \
             -H 'Content-Type: application/json' \
             --data-binary '{"username":"admin","password":"admin"}')
-          
+
           LOGIN_TOKEN=$(echo $LOGIN_RESPONSE | jq -r .token)
           if [ "$LOGIN_TOKEN" == "null" ] || [ -z "$LOGIN_TOKEN" ]; then
             echo "::error::Failed to get login token from Rancher."
@@ -118,7 +140,7 @@ jobs:
             -H "Authorization: Bearer $LOGIN_TOKEN" \
             -H 'Content-Type: application/json' \
             --data-binary '{"type":"token","description":"github-action-token","ttl":0}')
-          
+
           API_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .token)
           if [ "$API_TOKEN" == "null" ] || [ -z "$API_TOKEN" ]; then
             echo "::error::Failed to create a permanent API token."
@@ -132,7 +154,7 @@ jobs:
 
       - name: Create ob-team-charts ClusterRepo if needed
         run: |
-          if [ "${{ github.event.inputs.cluster_repo }}" == "ob-team-charts" ]; then
+          if [ "${CLUSTER_REPO}" == "ob-team-charts" ]; then
             # Check if the ClusterRepo already exists
             if kubectl get clusterrepo ob-team-charts >/dev/null 2>&1; then
               echo "ob-team-charts ClusterRepo already exists, skipping creation."
@@ -150,15 +172,15 @@ jobs:
               echo "ob-team-charts ClusterRepo created."
             fi
           else
-            echo "Using ClusterRepo: ${{ github.event.inputs.cluster_repo }} (assuming it exists)"
+            echo "Using ClusterRepo: ${CLUSTER_REPO} (assuming it exists)"
           fi
 
       - name: Test monitoring version
         run: |
-          echo "Waiting for ${{ github.event.inputs.cluster_repo }} clusterrepo to be downloaded..."
-          timeout 300s bash -c 'while [[ -z "$(kubectl get clusterrepo ${{ github.event.inputs.cluster_repo }} -o jsonpath='{.status.downloadTime}')" ]]; do echo -n "."; sleep 5; done'
-          echo "${{ github.event.inputs.cluster_repo }} clusterrepo is ready."
-          ./ob-charts-tool monitoring:testNewVersion ${{ github.event.inputs.chart_version }} \
+          echo "Waiting for ${CLUSTER_REPO} clusterrepo to be downloaded..."
+          timeout 300s bash -c 'while [[ -z "$(kubectl get clusterrepo ${CLUSTER_REPO} -o jsonpath='{.status.downloadTime}')" ]]; do echo -n "."; sleep 5; done'
+          echo "${CLUSTER_REPO} clusterrepo is ready."
+          ./ob-charts-tool monitoring:testNewVersion ${CHART_VERSION} \
             --rancher-url ${{ steps.get-rancher-url.outputs.url }} \
             --rancher-token ${{ steps.create-token.outputs.token }} \
-            --cluster-repo ${{ github.event.inputs.cluster_repo }}
+            --cluster-repo ${CLUSTER_REPO}

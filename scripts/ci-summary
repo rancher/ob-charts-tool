@@ -1,0 +1,29 @@
+#!/bin/bash
+
+declare TRACE
+[[ "${TRACE}" == 1 ]] && set -o xtrace
+set -o errexit
+set -o nounset
+set -o pipefail
+set -o noclobber
+
+ci-summary() {
+  cat <<EOF | tee "${GITHUB_STEP_SUMMARY}"
+# Summary
+
+## Workflow Inputs
+
+| INPUT_KEY | INPUT_VALUE |
+| --- | --- |
+|K3S_VERSION|\`${K3S_VERSION}\`|
+|RANCHER_VERSION|\`${RANCHER_VERSION}\`|
+|CHART_VERSION|\`${CHART_VERSION}\`|
+|CLUSTER_REPO|\`${CLUSTER_REPO}\`|
+EOF
+}
+
+main() {
+  ci-summary
+}
+
+main
