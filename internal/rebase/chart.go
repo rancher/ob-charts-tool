@@ -8,6 +8,7 @@ import (
 
 	"github.com/rancher/ob-charts-tool/internal/git"
 	gitremote "github.com/rancher/ob-charts-tool/internal/git/remote"
+	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
 	"github.com/rancher/ob-charts-tool/internal/upstream"
 	"github.com/rancher/ob-charts-tool/internal/util"
 
@@ -108,9 +109,18 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 		imageResolver.appVersion = chartDep.AppVersion
 	}
 
-	// When the imageResolver.extractChartValuesImages is called here, it will have updated chartImageSet values.
 	imageResolver.fetchChartValues(valuesFileURL)
-	err := imageResolver.extractChartValuesImages()
+
+	// For subcharts with explicit rules, extract images via the rule-defined paths so the
+	// rebase.yaml is driven by the same logic that branchverifycheck uses.
+	// For all other charts (e.g. kube-prometheus-stack), fall back to the heuristic sweep.
+	var err error
+	normalizedName := monsubcharts.NormalizeName(chartName)
+	if monsubcharts.SubchartsToCheck[normalizedName] {
+		err = imageResolver.extractRuleBasedImages(normalizedName)
+	} else {
+		err = imageResolver.extractChartValuesImages()
+	}
 	if err != nil {
 		log.Error(err)
 		log.Exit(1)
@@ -135,6 +145,46 @@ func (cir *chartImagesResolver) fetchChartValues(valuesURL string) {
 		panic(err)
 	}
 	cir.chartValuesData = body
+}
+
+// extractRuleBasedImages extracts image information from values.yaml using the explicit paths
+// defined in the subchart rules, keeping the rebase.yaml consistent with what branchverifycheck verifies.
+func (cir *chartImagesResolver) extractRuleBasedImages(normalizedChartName string) error {
+	var values map[string]interface{}
+	if err := yaml.Unmarshal(cir.chartValuesData, &values); err != nil {
+		return fmt.Errorf("error parsing values yaml for %s: %w", normalizedChartName, err)
+	}
+
+	for _, rule := range monsubcharts.GetRules(normalizedChartName) {
+		imageMap, ok := monsubcharts.NavigateYAMLMap(values, rule.ImageMapPath())
+		if !ok {
+			log.Debugf("'%s': image map not found at path '%s'", normalizedChartName, rule.ImageMapPath())
+			continue
+		}
+
+		img := ChartImage{
+			Registry:   stringFromMap(imageMap, "registry"),
+			Repository: stringFromMap(imageMap, "repository"),
+			Tag:        stringFromMap(imageMap, "tag"),
+		}
+
+		if img.Tag == "" {
+			log.Warnf("'%s' image tag at '%s' is empty; using appVersion (%s)", normalizedChartName, rule.ValuesKey, cir.appVersion)
+			img.Tag = rule.Apply(cir.appVersion)
+		}
+
+		_ = cir.chartImagesList.Add(img)
+	}
+	return nil
+}
+
+func stringFromMap(m map[string]interface{}, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 func (cir *chartImagesResolver) extractChartValuesImages() error {
@@ -187,6 +237,28 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 
 		// Recursively process nested structures
 		cir.extractChartImages(valueNode)
+	}
+}
+
+// PopulateSubchartTagExpectations computes the expected image tag values for all
+// tracked subcharts and stores them on the struct so they are included in rebase.yaml.
+// Call this before SaveStateToRebaseYaml.
+func (s *ChartRebaseInfo) PopulateSubchartTagExpectations() {
+	s.SubchartTagExpectations = nil
+	for _, dep := range s.DependencyChartVersions {
+		normalized := monsubcharts.NormalizeName(dep.Name)
+		if !monsubcharts.SubchartsToCheck[normalized] || dep.AppVersion == "" {
+			continue
+		}
+		expectation := SubchartTagExpectation{
+			Name:         dep.Name,
+			AppVersion:   dep.AppVersion,
+			ExpectedTags: make(map[string]string),
+		}
+		for _, rule := range monsubcharts.GetRules(normalized) {
+			expectation.ExpectedTags[rule.ValuesKey] = rule.Apply(dep.AppVersion)
+		}
+		s.SubchartTagExpectations = append(s.SubchartTagExpectations, expectation)
 	}
 }
 
