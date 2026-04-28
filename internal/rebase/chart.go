@@ -111,16 +111,12 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 
 	imageResolver.fetchChartValues(valuesFileURL)
 
-	// For subcharts with explicit rules, extract images via the rule-defined paths so the
-	// rebase.yaml is driven by the same logic that branchverifycheck uses.
-	// For all other charts (e.g. kube-prometheus-stack), fall back to the heuristic sweep.
-	var err error
-	normalizedName := monsubcharts.NormalizeName(chartName)
-	if monsubcharts.SubchartsToCheck[normalizedName] {
-		err = imageResolver.extractRuleBasedImages(normalizedName)
-	} else {
-		err = imageResolver.extractChartValuesImages()
-	}
+	// Use the heuristic sweep for all charts so that every image in values.yaml is
+	// captured in rebase.yaml, not just the subset that branchverifycheck happens to
+	// verify against appVersion.  Rule-based extraction is the right tool for
+	// branchverifycheck (targeted version assertions), but rebase info needs the full
+	// picture of all images that may need updating.
+	err := imageResolver.extractChartValuesImages()
 	if err != nil {
 		log.Error(err)
 		log.Exit(1)
