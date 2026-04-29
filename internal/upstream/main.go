@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	grafanaChartsURL    = "https://github.com/grafana/helm-charts.git"
+	grafanaChartsURL    = "https://github.com/grafana-community/helm-charts.git"
+	grafanaRawURL       = "https://github.com/grafana-community/helm-charts/raw/%s/charts/%s/%s.yaml"
 	prometheusChartsURL = "https://github.com/prometheus-community/helm-charts.git"
-	versionTemplate     = "kube-prometheus-stack-%s"
 	promCommunityRawURL = "https://github.com/prometheus-community/helm-charts/raw/%s/charts/%s/%s.yaml"
-	grafanaRawURL       = "https://github.com/grafana/helm-charts/raw/%s/charts/%s/%s.yaml"
+	versionTemplate     = "kube-prometheus-stack-%s"
 )
 
 func IdentifyChartUpstream(chartName string) string {

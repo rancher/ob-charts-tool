@@ -111,16 +111,12 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 
 	imageResolver.fetchChartValues(valuesFileURL)
 
-	// For subcharts with explicit rules, extract images via the rule-defined paths so the
-	// rebase.yaml is driven by the same logic that branchverifycheck uses.
-	// For all other charts (e.g. kube-prometheus-stack), fall back to the heuristic sweep.
-	var err error
-	normalizedName := monsubcharts.NormalizeName(chartName)
-	if monsubcharts.SubchartsToCheck[normalizedName] {
-		err = imageResolver.extractRuleBasedImages(normalizedName)
-	} else {
-		err = imageResolver.extractChartValuesImages()
-	}
+	// Use the heuristic sweep for all charts so that every image in values.yaml is
+	// captured in rebase.yaml, not just the subset that branchverifycheck happens to
+	// verify against appVersion.  Rule-based extraction is the right tool for
+	// branchverifycheck (targeted version assertions), but rebase info needs the full
+	// picture of all images that may need updating.
+	err := imageResolver.extractChartValuesImages()
 	if err != nil {
 		log.Error(err)
 		log.Exit(1)
@@ -145,46 +141,6 @@ func (cir *chartImagesResolver) fetchChartValues(valuesURL string) {
 		panic(err)
 	}
 	cir.chartValuesData = body
-}
-
-// extractRuleBasedImages extracts image information from values.yaml using the explicit paths
-// defined in the subchart rules, keeping the rebase.yaml consistent with what branchverifycheck verifies.
-func (cir *chartImagesResolver) extractRuleBasedImages(normalizedChartName string) error {
-	var values map[string]interface{}
-	if err := yaml.Unmarshal(cir.chartValuesData, &values); err != nil {
-		return fmt.Errorf("error parsing values yaml for %s: %w", normalizedChartName, err)
-	}
-
-	for _, rule := range monsubcharts.GetRules(normalizedChartName) {
-		imageMap, ok := monsubcharts.NavigateYAMLMap(values, rule.ImageMapPath())
-		if !ok {
-			log.Debugf("'%s': image map not found at path '%s'", normalizedChartName, rule.ImageMapPath())
-			continue
-		}
-
-		img := ChartImage{
-			Registry:   stringFromMap(imageMap, "registry"),
-			Repository: stringFromMap(imageMap, "repository"),
-			Tag:        stringFromMap(imageMap, "tag"),
-		}
-
-		if img.Tag == "" {
-			log.Warnf("'%s' image tag at '%s' is empty; using appVersion (%s)", normalizedChartName, rule.ValuesKey, cir.appVersion)
-			img.Tag = rule.Apply(cir.appVersion)
-		}
-
-		_ = cir.chartImagesList.Add(img)
-	}
-	return nil
-}
-
-func stringFromMap(m map[string]interface{}, key string) string {
-	if v, ok := m[key]; ok {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-	return ""
 }
 
 func (cir *chartImagesResolver) extractChartValuesImages() error {
