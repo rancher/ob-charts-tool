@@ -220,10 +220,11 @@ type PackageVersionInfo struct {
 // getPackageYAMLPath returns the path to package.yaml for a given package.
 // Handles package-specific directory structures.
 func getPackageYAMLPath(repoPath string, pkg PackageInfo) string {
-	if pkg.Name == "rancher-monitoring" {
+	if pkg.Name == "rancher-monitoring" || pkg.Name == "kube-prometheus-stack" {
 		// rancher-monitoring has a subdirectory with the package name
 		return filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, pkg.Name, "package.yaml")
 	}
+
 	// rancher-logging, rancher-project-monitoring, etc. have package.yaml at version root
 	return filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, "package.yaml")
 }
