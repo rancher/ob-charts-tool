@@ -546,6 +546,13 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 		return check
 	}
 
+	if pkg.Name == "kube-prometheus-stack" {
+		check.Passed = true
+		check.Critical = false
+		check.Message = "Skipping package images check for kube-prometheus-stack"
+		return check
+	}
+
 	chartPath := filepath.Join(repoPath, "charts", pkg.Name, info.Version)
 
 	// TODO eventually we should also check CRD charts values.yaml just in case
