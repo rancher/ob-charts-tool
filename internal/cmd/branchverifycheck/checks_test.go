@@ -12,6 +12,8 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // =============================================================================
@@ -21,12 +23,8 @@ import (
 // writeFile writes content to path, creating all parent directories.
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("MkdirAll(%s): %v", filepath.Dir(path), err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("WriteFile(%s): %v", path, err)
-	}
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 }
 
 // makePackageInfo returns a PackageInfo with FullPath = name+"/"+versionDir.
@@ -56,9 +54,7 @@ func setupPackage(t *testing.T, repoPath string, pkg PackageInfo, version string
 func setupBuiltChart(t *testing.T, repoPath, pkgName, version string) {
 	t.Helper()
 	dir := filepath.Join(repoPath, "charts", pkgName, version)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(%s): %v", dir, err)
-	}
+	require.NoError(t, os.MkdirAll(dir, 0o755))
 	// Write a placeholder file so the directory is non-empty.
 	writeFile(t, filepath.Join(dir, ".keep"), "")
 }
@@ -78,25 +74,19 @@ func makeCommittedGitRepo(t *testing.T) (string, *git.Repository) {
 	t.Helper()
 	dir := t.TempDir()
 	repo, err := git.PlainInit(dir, false)
-	if err != nil {
-		t.Fatalf("git.PlainInit: %v", err)
-	}
+	require.NoError(t, err, "git.PlainInit")
 
 	wt, err := repo.Worktree()
-	if err != nil {
-		t.Fatalf("Worktree: %v", err)
-	}
+	require.NoError(t, err, "Worktree")
 
 	// Create a dummy file and commit it so HEAD is a proper branch ref.
 	writeFile(t, filepath.Join(dir, "README.md"), "# test\n")
-	if _, err := wt.Add("README.md"); err != nil {
-		t.Fatalf("git add: %v", err)
-	}
+	_, err = wt.Add("README.md")
+	require.NoError(t, err, "git add")
 
 	sig := &object.Signature{Name: "Test", Email: "test@test.com", When: time.Now()}
-	if _, err := wt.Commit("initial commit", &git.CommitOptions{Author: sig}); err != nil {
-		t.Fatalf("git commit: %v", err)
-	}
+	_, err = wt.Commit("initial commit", &git.CommitOptions{Author: sig})
+	require.NoError(t, err, "git commit")
 
 	return dir, repo
 }
@@ -105,9 +95,7 @@ func makeCommittedGitRepo(t *testing.T) (string, *git.Repository) {
 func addGitRemote(t *testing.T, repo *git.Repository, name, url string) {
 	t.Helper()
 	_, err := repo.CreateRemote(&config.RemoteConfig{Name: name, URLs: []string{url}})
-	if err != nil {
-		t.Fatalf("CreateRemote(%s): %v", name, err)
-	}
+	require.NoError(t, err, "CreateRemote(%s)", name)
 }
 
 // setBranch sets the current HEAD to a new branch with the given name,
@@ -115,22 +103,18 @@ func addGitRemote(t *testing.T, repo *git.Repository, name, url string) {
 func setBranch(t *testing.T, repo *git.Repository, branchName string) {
 	t.Helper()
 	headRef, err := repo.Head()
-	if err != nil {
-		t.Fatalf("Head(): %v", err)
-	}
+	require.NoError(t, err, "Head()")
+
 	// Create the branch ref
 	branchRef := plumbing.NewHashReference(
 		plumbing.NewBranchReferenceName(branchName),
 		headRef.Hash(),
 	)
-	if err := repo.Storer.SetReference(branchRef); err != nil {
-		t.Fatalf("SetReference branch: %v", err)
-	}
+	require.NoError(t, repo.Storer.SetReference(branchRef), "SetReference branch")
+
 	// Point HEAD at the new branch
 	symRef := plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName(branchName))
-	if err := repo.Storer.SetReference(symRef); err != nil {
-		t.Fatalf("SetReference HEAD: %v", err)
-	}
+	require.NoError(t, repo.Storer.SetReference(symRef), "SetReference HEAD")
 }
 
 // =============================================================================
@@ -155,11 +139,11 @@ func TestExtractRancherRelease(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
 			got, err := extractRancherRelease(tc.input)
-			if (err != nil) != tc.wantErr {
-				t.Errorf("extractRancherRelease(%q) error = %v, wantErr %v", tc.input, err, tc.wantErr)
-			}
-			if !tc.wantErr && got != tc.wantRelease {
-				t.Errorf("extractRancherRelease(%q) = %d, want %d", tc.input, got, tc.wantRelease)
+			if tc.wantErr {
+				assert.Error(t, err, "extractRancherRelease(%q)", tc.input)
+			} else {
+				assert.NoError(t, err, "extractRancherRelease(%q)", tc.input)
+				assert.Equal(t, tc.wantRelease, got)
 			}
 		})
 	}
@@ -186,9 +170,8 @@ func TestIsImageDefinition(t *testing.T) {
 			for k, v := range tc.m {
 				m[k] = v
 			}
-			if got := isImageDefinition(m); got != tc.want {
-				t.Errorf("isImageDefinition() = %v, want %v", got, tc.want)
-			}
+			got := isImageDefinition(m)
+			assert.Equal(t, tc.want, got, "isImageDefinition()")
 		})
 	}
 }
@@ -246,31 +229,24 @@ func TestValidateImageDefinition(t *testing.T) {
 			}
 			var invalidImages []InvalidImage
 			validateImageDefinition(m, "test.path", &invalidImages)
-			if len(invalidImages) == 0 {
-				if tc.wantIssues > 0 {
-					t.Errorf("validateImageDefinition: got 0 invalid images, want %d", tc.wantIssues)
-				}
-				return
-			}
+
 			totalIssues := 0
 			for _, img := range invalidImages {
 				totalIssues += len(img.Issues)
 			}
-			if totalIssues != tc.wantIssues {
-				t.Errorf("validateImageDefinition: got %d issues, want %d: %+v", totalIssues, tc.wantIssues, invalidImages)
-			}
+			assert.Equal(t, tc.wantIssues, totalIssues, "validateImageDefinition issues: %+v", invalidImages)
+
 			if tc.wantSubstr != "" {
 				found := false
 				for _, img := range invalidImages {
 					for _, issue := range img.Issues {
 						if strings.Contains(issue, tc.wantSubstr) {
 							found = true
+							break
 						}
 					}
 				}
-				if !found {
-					t.Errorf("validateImageDefinition: no issue contains %q: %+v", tc.wantSubstr, invalidImages)
-				}
+				assert.True(t, found, "no issue contains %q: %+v", tc.wantSubstr, invalidImages)
 			}
 		})
 	}
@@ -352,14 +328,9 @@ func TestFindInvalidImages(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var invalidImages []InvalidImage
 			findInvalidImages(tc.data, "", &invalidImages)
-			if len(invalidImages) != tc.wantInvalidCount {
-				t.Errorf("findInvalidImages: got %d invalid images, want %d: %+v", len(invalidImages), tc.wantInvalidCount, invalidImages)
-				return
-			}
+			assert.Len(t, invalidImages, tc.wantInvalidCount, "findInvalidImages: %+v", invalidImages)
 			if tc.wantPath != "" && len(invalidImages) > 0 {
-				if invalidImages[0].Path != tc.wantPath {
-					t.Errorf("findInvalidImages: path = %q, want %q", invalidImages[0].Path, tc.wantPath)
-				}
+				assert.Equal(t, tc.wantPath, invalidImages[0].Path)
 			}
 		})
 	}
@@ -389,9 +360,7 @@ func TestGetPackageYAMLPath(t *testing.T) {
 			pkg := makePackageInfo(tc.pkgName, tc.versionDir)
 			got := getPackageYAMLPath("/repo", pkg)
 			want := filepath.Join("/repo", tc.wantSuffix)
-			if got != want {
-				t.Errorf("getPackageYAMLPath() = %q, want %q", got, want)
-			}
+			assert.Equal(t, want, got)
 		})
 	}
 }
@@ -422,12 +391,8 @@ func TestFindValuesYAMLFiles(t *testing.T) {
 				writeFile(t, filepath.Join(dir, f), "")
 			}
 			got, err := findValuesYAMLFiles(dir)
-			if err != nil {
-				t.Fatalf("findValuesYAMLFiles: %v", err)
-			}
-			if len(got) != tc.wantCount {
-				t.Errorf("findValuesYAMLFiles: got %d files, want %d: %v", len(got), tc.wantCount, got)
-			}
+			require.NoError(t, err, "findValuesYAMLFiles")
+			assert.Len(t, got, tc.wantCount, "files: %v", got)
 		})
 	}
 }
@@ -479,17 +444,13 @@ func TestCheckChartBuilt(t *testing.T) {
 			setupPackage(t, repoPath, pkg, tc.packageVersion)
 			// Create charts dir only if we have built versions to add (empty charts/ test uses MkdirAll with no subdirs)
 			if tc.name == "charts/ dir exists but is empty" {
-				if err := os.MkdirAll(filepath.Join(repoPath, "charts", tc.pkgName), 0o755); err != nil {
-					t.Fatalf("MkdirAll: %v", err)
-				}
+				require.NoError(t, os.MkdirAll(filepath.Join(repoPath, "charts", tc.pkgName), 0o755))
 			}
 			for _, v := range tc.builtVersions {
 				setupBuiltChart(t, repoPath, tc.pkgName, v)
 			}
 			result := CheckChartBuilt(repoPath, pkg)
-			if result.Passed != tc.wantPassed {
-				t.Errorf("CheckChartBuilt.Passed = %v, want %v: %s", result.Passed, tc.wantPassed, result.Message)
-			}
+			assert.Equal(t, tc.wantPassed, result.Passed, "CheckChartBuilt: %s", result.Message)
 		})
 	}
 
@@ -498,9 +459,7 @@ func TestCheckChartBuilt(t *testing.T) {
 		pkg := makePackageInfo("rancher-logging", "4.1")
 		// No package.yaml written
 		result := CheckChartBuilt(repoPath, pkg)
-		if result.Passed {
-			t.Errorf("CheckChartBuilt should fail when package.yaml is missing")
-		}
+		assert.False(t, result.Passed, "should fail when package.yaml is missing")
 	})
 }
 
@@ -600,9 +559,7 @@ func TestCheckSequentialVersion(t *testing.T) {
 				setupBuiltChart(t, repoPath, tc.pkgName, v)
 			}
 			result := CheckSequentialVersion(repoPath, pkg)
-			if result.Passed != tc.wantPassed {
-				t.Errorf("CheckSequentialVersion.Passed = %v, want %v: %s", result.Passed, tc.wantPassed, result.Message)
-			}
+			assert.Equal(t, tc.wantPassed, result.Passed, "CheckSequentialVersion: %s", result.Message)
 		})
 	}
 
@@ -612,9 +569,7 @@ func TestCheckSequentialVersion(t *testing.T) {
 		setupPackage(t, repoPath, pkg, "not-a-version")
 		setupBuiltChart(t, repoPath, "rancher-logging", "1.0.0")
 		result := CheckSequentialVersion(repoPath, pkg)
-		if result.Passed {
-			t.Errorf("CheckSequentialVersion should fail for invalid version format")
-		}
+		assert.False(t, result.Passed, "should fail for invalid version format")
 	})
 }
 
@@ -693,16 +648,11 @@ func TestCheckPackageImages(t *testing.T) {
 			repoPath, pkg := setup(t)
 			writeFile(t, filepath.Join(chartDir(repoPath), "values.yaml"), tc.valuesYAML)
 			result := CheckPackageImages(repoPath, pkg)
-			if result.Passed != tc.wantPassed {
-				t.Errorf("CheckPackageImages.Passed = %v, want %v: %s", result.Passed, tc.wantPassed, result.Message)
-			}
+			assert.Equal(t, tc.wantPassed, result.Passed, "CheckPackageImages: %s", result.Message)
 			if !tc.wantPassed && tc.wantInvalid > 0 && result.Details != nil {
 				details, ok := result.Details.(*ImageCheckDetails)
-				if !ok {
-					t.Errorf("Details is not *ImageCheckDetails")
-				} else if len(details.InvalidImages) != tc.wantInvalid {
-					t.Errorf("InvalidImages count = %d, want %d", len(details.InvalidImages), tc.wantInvalid)
-				}
+				require.True(t, ok, "Details should be *ImageCheckDetails")
+				assert.Len(t, details.InvalidImages, tc.wantInvalid)
 			}
 		})
 	}
@@ -711,9 +661,7 @@ func TestCheckPackageImages(t *testing.T) {
 		repoPath, pkg := setup(t)
 		// No values.yaml written — just the .keep file from setupBuiltChart
 		result := CheckPackageImages(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("CheckPackageImages should pass when no values.yaml files exist: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass when no values.yaml files exist: %s", result.Message)
 	})
 
 	t.Run("multiple values files: one invalid", func(t *testing.T) {
@@ -729,9 +677,7 @@ func TestCheckPackageImages(t *testing.T) {
   tag: v1
 `)
 		result := CheckPackageImages(repoPath, pkg)
-		if result.Passed {
-			t.Errorf("CheckPackageImages should fail when one of multiple values files has invalid image")
-		}
+		assert.False(t, result.Passed, "should fail when one of multiple values files has invalid image")
 	})
 }
 
@@ -758,18 +704,14 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		pkg := makePackageInfo("rancher-logging", "4.1")
 		setupPackage(t, repoPath, pkg, "1.0.0")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass (skipped) for non-rancher-monitoring: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass (skipped) for non-rancher-monitoring: %s", result.Message)
 	})
 
 	t.Run("no charts/ subdir: skipped", func(t *testing.T) {
 		repoPath, pkg := setupMon(t)
 		// charts/<version>/charts/ does not exist
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass (skipped) when charts/ subdir missing: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass (skipped) when charts/ subdir missing: %s", result.Message)
 	})
 
 	t.Run("grafana: matching tag", func(t *testing.T) {
@@ -777,9 +719,7 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		setupSubchart(t, subchartsDir(repoPath), "grafana", "10.0.0",
 			"image:\n  tag: \"10.0.0\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass for matching grafana tag: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass for matching grafana tag: %s", result.Message)
 	})
 
 	t.Run("grafana: mismatched tag", func(t *testing.T) {
@@ -787,16 +727,10 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		setupSubchart(t, subchartsDir(repoPath), "grafana", "10.0.0",
 			"image:\n  tag: \"9.0.0\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if result.Passed {
-			t.Errorf("should fail for mismatched grafana tag")
-		}
+		assert.False(t, result.Passed, "should fail for mismatched grafana tag")
 		details, ok := result.Details.(*SubchartTagCheckDetails)
-		if !ok {
-			t.Fatalf("Details is not *SubchartTagCheckDetails")
-		}
-		if len(details.Mismatches) != 1 {
-			t.Errorf("want 1 mismatch, got %d", len(details.Mismatches))
-		}
+		require.True(t, ok, "Details should be *SubchartTagCheckDetails")
+		assert.Len(t, details.Mismatches, 1)
 	})
 
 	t.Run("kube-state-metrics: tag without v prefix accepted", func(t *testing.T) {
@@ -804,9 +738,7 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		setupSubchart(t, subchartsDir(repoPath), "kube-state-metrics", "2.10.0",
 			"image:\n  tag: \"2.10.0\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass when kube-state-metrics image.tag matches appVersion (v-normalization): %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass when kube-state-metrics image.tag matches appVersion (v-normalization): %s", result.Message)
 	})
 
 	t.Run("unknown subchart not in SubchartsToCheck: ignored", func(t *testing.T) {
@@ -814,9 +746,7 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		setupSubchart(t, subchartsDir(repoPath), "some-unknown-chart", "1.0.0",
 			"image:\n  tag: \"completely-wrong\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass when subchart is not in SubchartsToCheck: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass when subchart is not in SubchartsToCheck: %s", result.Message)
 	})
 
 	t.Run("rancher-prefixed subdir: NormalizeName strips prefix", func(t *testing.T) {
@@ -825,9 +755,7 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		setupSubchart(t, subchartsDir(repoPath), "rancher-grafana", "10.0.0",
 			"image:\n  tag: \"10.0.0\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass for rancher-grafana with matching tag: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass for rancher-grafana with matching tag: %s", result.Message)
 	})
 
 	t.Run("Chart.yaml missing: subchart skipped", func(t *testing.T) {
@@ -836,9 +764,7 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		subDir := filepath.Join(subchartsDir(repoPath), "grafana")
 		writeFile(t, filepath.Join(subDir, "values.yaml"), "image:\n  tag: \"wrong\"\n")
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass when Chart.yaml is missing (subchart skipped): %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass when Chart.yaml is missing (subchart skipped): %s", result.Message)
 	})
 
 	t.Run("values.yaml missing: subchart skipped", func(t *testing.T) {
@@ -847,9 +773,7 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 		writeFile(t, filepath.Join(subDir, "Chart.yaml"), "appVersion: 10.0.0\n")
 		// No values.yaml
 		result := CheckSubchartAppVersionTags(repoPath, pkg)
-		if !result.Passed {
-			t.Errorf("should pass when values.yaml is missing (subchart skipped): %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass when values.yaml is missing (subchart skipped): %s", result.Message)
 	})
 }
 
@@ -860,28 +784,21 @@ func TestCheckSubchartAppVersionTags(t *testing.T) {
 func TestCheckIsGitRepo(t *testing.T) {
 	t.Run("valid git repo", func(t *testing.T) {
 		dir := t.TempDir()
-		if _, err := git.PlainInit(dir, false); err != nil {
-			t.Fatalf("PlainInit: %v", err)
-		}
+		_, err := git.PlainInit(dir, false)
+		require.NoError(t, err, "PlainInit")
 		result := CheckIsGitRepo(dir)
-		if !result.Passed {
-			t.Errorf("CheckIsGitRepo should pass for valid git repo: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass for valid git repo: %s", result.Message)
 	})
 
 	t.Run("empty dir (not a git repo)", func(t *testing.T) {
 		dir := t.TempDir()
 		result := CheckIsGitRepo(dir)
-		if result.Passed {
-			t.Errorf("CheckIsGitRepo should fail for a non-git directory")
-		}
+		assert.False(t, result.Passed, "should fail for a non-git directory")
 	})
 
 	t.Run("non-existent path", func(t *testing.T) {
 		result := CheckIsGitRepo("/nonexistent/path/that/does/not/exist")
-		if result.Passed {
-			t.Errorf("CheckIsGitRepo should fail for non-existent path")
-		}
+		assert.False(t, result.Passed, "should fail for non-existent path")
 	})
 }
 
@@ -904,9 +821,7 @@ func TestCheckHasObTeamChartsRemote(t *testing.T) {
 			_, repo := makeCommittedGitRepo(t)
 			addGitRemote(t, repo, "origin", tc.remoteURL)
 			result := CheckHasObTeamChartsRemote(repo)
-			if result.Passed != tc.wantPassed {
-				t.Errorf("CheckHasObTeamChartsRemote.Passed = %v, want %v: %s", result.Passed, tc.wantPassed, result.Message)
-			}
+			assert.Equal(t, tc.wantPassed, result.Passed, "CheckHasObTeamChartsRemote: %s", result.Message)
 		})
 	}
 
@@ -914,9 +829,7 @@ func TestCheckHasObTeamChartsRemote(t *testing.T) {
 		_, repo := makeCommittedGitRepo(t)
 		// No remotes added
 		result := CheckHasObTeamChartsRemote(repo)
-		if result.Passed {
-			t.Errorf("CheckHasObTeamChartsRemote should fail when no remotes exist")
-		}
+		assert.False(t, result.Passed, "should fail when no remotes exist")
 	})
 
 	t.Run("multiple remotes: one correct", func(t *testing.T) {
@@ -924,9 +837,7 @@ func TestCheckHasObTeamChartsRemote(t *testing.T) {
 		addGitRemote(t, repo, "wrong", "https://github.com/rancher/helm-charts.git")
 		addGitRemote(t, repo, "upstream", "https://github.com/rancher/ob-team-charts.git")
 		result := CheckHasObTeamChartsRemote(repo)
-		if !result.Passed {
-			t.Errorf("CheckHasObTeamChartsRemote should pass when at least one remote is correct: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass when at least one remote is correct: %s", result.Message)
 	})
 }
 
@@ -951,12 +862,8 @@ func TestCheckOnFeatureBranch(t *testing.T) {
 			setBranch(t, repo, tc.branchName)
 
 			gotName, result := CheckOnFeatureBranch(repo)
-			if result.Passed != tc.wantPassed {
-				t.Errorf("CheckOnFeatureBranch.Passed = %v, want %v: %s", result.Passed, tc.wantPassed, result.Message)
-			}
-			if gotName != tc.wantBranchName {
-				t.Errorf("branch name = %q, want %q", gotName, tc.wantBranchName)
-			}
+			assert.Equal(t, tc.wantPassed, result.Passed, "CheckOnFeatureBranch: %s", result.Message)
+			assert.Equal(t, tc.wantBranchName, gotName)
 		})
 	}
 }
@@ -965,34 +872,25 @@ func TestCheckRepoClean(t *testing.T) {
 	t.Run("clean repo after commit", func(t *testing.T) {
 		_, repo := makeCommittedGitRepo(t)
 		result := CheckRepoClean(repo)
-		if !result.Passed {
-			t.Errorf("CheckRepoClean should pass for clean repo: %s", result.Message)
-		}
+		assert.True(t, result.Passed, "should pass for clean repo: %s", result.Message)
 	})
 
 	t.Run("dirty: untracked file", func(t *testing.T) {
 		dir, repo := makeCommittedGitRepo(t)
 		writeFile(t, filepath.Join(dir, "untracked.txt"), "new file\n")
 		result := CheckRepoClean(repo)
-		if result.Passed {
-			t.Errorf("CheckRepoClean should fail when untracked file exists")
-		}
+		assert.False(t, result.Passed, "should fail when untracked file exists")
 	})
 
 	t.Run("dirty: staged but uncommitted file", func(t *testing.T) {
 		dir, repo := makeCommittedGitRepo(t)
 		writeFile(t, filepath.Join(dir, "staged.txt"), "staged content\n")
 		wt, err := repo.Worktree()
-		if err != nil {
-			t.Fatalf("Worktree: %v", err)
-		}
-		if _, err := wt.Add("staged.txt"); err != nil {
-			t.Fatalf("git add: %v", err)
-		}
+		require.NoError(t, err, "Worktree")
+		_, err = wt.Add("staged.txt")
+		require.NoError(t, err, "git add")
 		result := CheckRepoClean(repo)
-		if result.Passed {
-			t.Errorf("CheckRepoClean should fail when staged changes exist")
-		}
+		assert.False(t, result.Passed, "should fail when staged changes exist")
 	})
 
 	t.Run("dirty: modified tracked file (not staged)", func(t *testing.T) {
@@ -1000,8 +898,6 @@ func TestCheckRepoClean(t *testing.T) {
 		// README.md was committed in makeCommittedGitRepo — modify it without staging
 		writeFile(t, filepath.Join(dir, "README.md"), "# modified content\n")
 		result := CheckRepoClean(repo)
-		if result.Passed {
-			t.Errorf("CheckRepoClean should fail when tracked file is modified but not staged")
-		}
+		assert.False(t, result.Passed, "should fail when tracked file is modified but not staged")
 	})
 }

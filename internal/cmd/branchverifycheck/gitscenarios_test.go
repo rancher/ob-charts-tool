@@ -10,13 +10,14 @@ package branchverifycheck
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // =============================================================================
@@ -38,13 +39,9 @@ func newMockRepo(t *testing.T) *mockRepo {
 	t.Helper()
 	dir := t.TempDir()
 	repo, err := git.PlainInit(dir, false)
-	if err != nil {
-		t.Fatalf("PlainInit: %v", err)
-	}
+	require.NoError(t, err, "PlainInit")
 	wt, err := repo.Worktree()
-	if err != nil {
-		t.Fatalf("Worktree: %v", err)
-	}
+	require.NoError(t, err, "Worktree")
 	return &mockRepo{
 		dir:  dir,
 		repo: repo,
@@ -60,18 +57,13 @@ func (m *mockRepo) commit(t *testing.T, files map[string]string, msg string) *ob
 	t.Helper()
 	for relPath, content := range files {
 		writeFile(t, fmt.Sprintf("%s/%s", m.dir, relPath), content)
-		if _, err := m.wt.Add(relPath); err != nil {
-			t.Fatalf("git add %s: %v", relPath, err)
-		}
+		_, err := m.wt.Add(relPath)
+		require.NoError(t, err, "git add %s", relPath)
 	}
 	hash, err := m.wt.Commit(msg, &git.CommitOptions{Author: m.sig})
-	if err != nil {
-		t.Fatalf("git commit %q: %v", msg, err)
-	}
+	require.NoError(t, err, "git commit %q", msg)
 	c, err := m.repo.CommitObject(hash)
-	if err != nil {
-		t.Fatalf("CommitObject: %v", err)
-	}
+	require.NoError(t, err, "CommitObject")
 	return c
 }
 
@@ -80,13 +72,9 @@ func (m *mockRepo) commit(t *testing.T, files map[string]string, msg string) *ob
 func (m *mockRepo) makeRef(t *testing.T, name string, c *object.Commit) *plumbing.Reference {
 	t.Helper()
 	ref := plumbing.NewHashReference(plumbing.ReferenceName(name), c.Hash)
-	if err := m.repo.Storer.SetReference(ref); err != nil {
-		t.Fatalf("SetReference %s: %v", name, err)
-	}
+	require.NoError(t, m.repo.Storer.SetReference(ref), "SetReference %s", name)
 	stored, err := m.repo.Reference(plumbing.ReferenceName(name), true)
-	if err != nil {
-		t.Fatalf("Reference %s: %v", name, err)
-	}
+	require.NoError(t, err, "Reference %s", name)
 	return stored
 }
 
@@ -221,14 +209,8 @@ func TestFindModifiedPackages(t *testing.T) {
 
 			packages, result := FindModifiedPackages(refs)
 
-			if result.Passed != tc.wantPassed {
-				t.Errorf("FindModifiedPackages.Passed = %v, want %v: %s", result.Passed, tc.wantPassed, result.Message)
-			}
-
-			if len(packages) != tc.wantCount {
-				t.Errorf("len(packages) = %d, want %d: %v", len(packages), tc.wantCount, packages)
-				return
-			}
+			assert.Equal(t, tc.wantPassed, result.Passed, "FindModifiedPackages: %s", result.Message)
+			assert.Len(t, packages, tc.wantCount, "packages: %v", packages)
 
 			if len(tc.wantPackages) > 0 {
 				found := make(map[string]bool)
@@ -236,9 +218,7 @@ func TestFindModifiedPackages(t *testing.T) {
 					found[p.FullPath] = true
 				}
 				for _, want := range tc.wantPackages {
-					if !found[want] {
-						t.Errorf("expected package %q not found in results: %v", want, packages)
-					}
+					assert.True(t, found[want], "expected package %q not found in results: %v", want, packages)
 				}
 			}
 		})
@@ -264,15 +244,9 @@ func TestCheckBranchCurrent(t *testing.T) {
 
 		info, result := CheckBranchCurrent(refs, m.repo)
 
-		if !result.Passed {
-			t.Errorf("CheckBranchCurrent should pass when branch is up-to-date: %s", result.Message)
-		}
-		if !info.IsUpToDate {
-			t.Errorf("BranchInfo.IsUpToDate should be true")
-		}
-		if info.CommitsBehind != 0 {
-			t.Errorf("CommitsBehind = %d, want 0", info.CommitsBehind)
-		}
+		assert.True(t, result.Passed, "should pass when branch is up-to-date: %s", result.Message)
+		assert.True(t, info.IsUpToDate, "BranchInfo.IsUpToDate should be true")
+		assert.Equal(t, 0, info.CommitsBehind)
 	})
 
 	t.Run("behind upstream by 1 commit", func(t *testing.T) {
@@ -289,15 +263,9 @@ func TestCheckBranchCurrent(t *testing.T) {
 
 		info, result := CheckBranchCurrent(refs, m.repo)
 
-		if result.Passed {
-			t.Errorf("CheckBranchCurrent should fail (warn) when branch is behind")
-		}
-		if info.IsUpToDate {
-			t.Errorf("BranchInfo.IsUpToDate should be false")
-		}
-		if info.CommitsBehind != 1 {
-			t.Errorf("CommitsBehind = %d, want 1", info.CommitsBehind)
-		}
+		assert.False(t, result.Passed, "should fail (warn) when branch is behind")
+		assert.False(t, info.IsUpToDate, "BranchInfo.IsUpToDate should be false")
+		assert.Equal(t, 1, info.CommitsBehind)
 	})
 
 	t.Run("behind upstream by 3 commits", func(t *testing.T) {
@@ -313,15 +281,9 @@ func TestCheckBranchCurrent(t *testing.T) {
 
 		info, result := CheckBranchCurrent(refs, m.repo)
 
-		if result.Passed {
-			t.Errorf("CheckBranchCurrent should fail when branch is behind")
-		}
-		if info.CommitsBehind != 3 {
-			t.Errorf("CommitsBehind = %d, want 3", info.CommitsBehind)
-		}
-		if !strings.Contains(result.Message, "3") {
-			t.Errorf("message should mention commit count: %s", result.Message)
-		}
+		assert.False(t, result.Passed, "should fail when branch is behind")
+		assert.Equal(t, 3, info.CommitsBehind)
+		assert.Contains(t, result.Message, "3", "message should mention commit count")
 	})
 }
 
@@ -357,9 +319,7 @@ func TestCountCommitsBehind(t *testing.T) {
 			upstreamRef := m.makeRef(t, "refs/remotes/upstream/main", upstream)
 
 			got := CountCommitsBehind(m.repo, upstreamRef, mergeBase.Hash)
-			if got != tc.want {
-				t.Errorf("CountCommitsBehind = %d, want %d", got, tc.want)
-			}
+			assert.Equal(t, tc.want, got, "CountCommitsBehind")
 		})
 	}
 }
