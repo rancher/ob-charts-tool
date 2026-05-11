@@ -104,20 +104,14 @@ func TestSubchartRule_Apply(t *testing.T) {
 func TestGetRules(t *testing.T) {
 	t.Run("kube-state-metrics returns custom rules", func(t *testing.T) {
 		rules := GetRules("kube-state-metrics")
-		if len(rules) != 2 {
-			t.Fatalf("GetRules(kube-state-metrics) returned %d rules, want 2", len(rules))
+		if len(rules) != 1 {
+			t.Fatalf("GetRules(kube-state-metrics) returned %d rules, want 1", len(rules))
 		}
 		if rules[0].ValuesKey != "image.tag" {
 			t.Errorf("GetRules(kube-state-metrics)[0].ValuesKey = %q, want image.tag", rules[0].ValuesKey)
 		}
 		if got := rules[0].Apply("2.0.0"); got != "v2.0.0" {
 			t.Errorf("kube-state-metrics rules[0].Apply(2.0.0) = %q, want v2.0.0", got)
-		}
-		if rules[1].ValuesKey != "kubeRBACProxy.image.tag" {
-			t.Errorf("GetRules(kube-state-metrics)[1].ValuesKey = %q, want kubeRBACProxy.image.tag", rules[1].ValuesKey)
-		}
-		if got := rules[1].Apply("2.0.0"); got != "v2.0.0" {
-			t.Errorf("kube-state-metrics rules[1].Apply(2.0.0) = %q, want v2.0.0", got)
 		}
 	})
 
@@ -311,8 +305,7 @@ func TestCheckTagsInValues(t *testing.T) {
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.17.0",
 			values: map[string]any{
-				"image":         map[string]any{"tag": "2.17.0-10.11"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.17.0"}},
+				"image": map[string]any{"tag": "2.17.0-10.11"},
 			},
 			wantMismatches: 0,
 		},
@@ -335,23 +328,11 @@ func TestCheckTagsInValues(t *testing.T) {
 			wantActual:     "(not found)",
 		},
 		{
-			// After v-normalization "2.10.0" matches "v2.10.0"; only kubeRBACProxy is absent.
-			name:           "kube-state-metrics: no-v image.tag passes, missing kubeRBACProxy fails",
-			normalizedName: "kube-state-metrics",
-			appVersion:     "2.10.0",
-			values:         map[string]any{"image": map[string]any{"tag": "2.10.0"}},
-			wantMismatches: 1,
-			wantKey:        "kubeRBACProxy.image.tag",
-			wantActual:     "(not found)",
-			wantExpected:   "v2.10.0",
-		},
-		{
 			name:           "kube-state-metrics: completely wrong image.tag version",
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.10.0",
 			values: map[string]any{
-				"image":         map[string]any{"tag": "1.0.0"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.10.0"}},
+				"image": map[string]any{"tag": "1.0.0"},
 			},
 			wantMismatches: 1,
 			wantKey:        "image.tag",
@@ -363,23 +344,9 @@ func TestCheckTagsInValues(t *testing.T) {
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.10.0",
 			values: map[string]any{
-				"image":         map[string]any{"tag": "v2.10.0"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.10.0"}},
+				"image": map[string]any{"tag": "v2.10.0"},
 			},
 			wantMismatches: 0,
-		},
-		{
-			name:           "kube-state-metrics: kubeRBACProxy tag mismatch is caught",
-			normalizedName: "kube-state-metrics",
-			appVersion:     "2.10.0",
-			values: map[string]any{
-				"image":         map[string]any{"tag": "v2.10.0"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "0.20.1-16.14"}},
-			},
-			wantMismatches: 1,
-			wantKey:        "kubeRBACProxy.image.tag",
-			wantActual:     "0.20.1-16.14",
-			wantExpected:   "v2.10.0",
 		},
 		{
 			name:           "node-exporter: uses DefaultRules, matching",
