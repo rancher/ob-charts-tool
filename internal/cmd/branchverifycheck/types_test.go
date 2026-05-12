@@ -1,8 +1,10 @@
 package branchverifycheck
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // cr builds a minimal CheckResult for use in table-driven tests.
@@ -28,9 +30,8 @@ func TestPackageResult_HasCriticalFailure(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			pr := PackageResult{Checks: tc.checks}
-			if got := pr.HasCriticalFailure(); got != tc.want {
-				t.Errorf("HasCriticalFailure() = %v, want %v", got, tc.want)
-			}
+			got := pr.HasCriticalFailure()
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -59,9 +60,8 @@ func TestVerificationResult_HasCriticalFailure(t *testing.T) {
 					{Package: PackageInfo{FullPath: "pkg/1.0"}, Checks: tc.packageChecks},
 				}
 			}
-			if got := r.HasCriticalFailure(); got != tc.want {
-				t.Errorf("HasCriticalFailure() = %v, want %v", got, tc.want)
-			}
+			got := r.HasCriticalFailure()
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -105,10 +105,9 @@ func TestVerificationResult_CountResults(t *testing.T) {
 				}
 			}
 			passed, failed, warnings := r.CountResults()
-			if passed != tc.wantPassed || failed != tc.wantFailed || warnings != tc.wantWarnings {
-				t.Errorf("CountResults() = (%d, %d, %d), want (%d, %d, %d)",
-					passed, failed, warnings, tc.wantPassed, tc.wantFailed, tc.wantWarnings)
-			}
+			assert.Equal(t, tc.wantPassed, passed, "passed count")
+			assert.Equal(t, tc.wantFailed, failed, "failed count")
+			assert.Equal(t, tc.wantWarnings, warnings, "warnings count")
 		})
 	}
 }
@@ -121,33 +120,19 @@ func TestVerificationResult_GetOrCreatePackageResult(t *testing.T) {
 
 	// First call creates entry
 	pr1 := r.GetOrCreatePackageResult(pkg1)
-	if pr1 == nil {
-		t.Fatal("GetOrCreatePackageResult returned nil")
-	}
-	if len(r.PackageResults) != 1 {
-		t.Errorf("len(PackageResults) = %d, want 1", len(r.PackageResults))
-	}
+	require.NotNil(t, pr1, "GetOrCreatePackageResult should not return nil")
+	assert.Len(t, r.PackageResults, 1)
 
 	// Same key returns same pointer (no duplicate)
 	pr1again := r.GetOrCreatePackageResult(pkg1)
-	if pr1again != pr1 {
-		t.Errorf("second call with same key returned different pointer")
-	}
-	if len(r.PackageResults) != 1 {
-		t.Errorf("len(PackageResults) = %d, want 1 (no duplicate)", len(r.PackageResults))
-	}
+	assert.Same(t, pr1, pr1again, "should return same pointer for same key")
+	assert.Len(t, r.PackageResults, 1, "should not create duplicate")
 
 	// Different key creates new entry
 	pr2 := r.GetOrCreatePackageResult(pkg2)
-	if pr2 == nil {
-		t.Fatal("GetOrCreatePackageResult returned nil for second package")
-	}
-	if len(r.PackageResults) != 2 {
-		t.Errorf("len(PackageResults) = %d, want 2", len(r.PackageResults))
-	}
-	if pr2 == pr1 {
-		t.Errorf("second package returned same pointer as first")
-	}
+	require.NotNil(t, pr2, "GetOrCreatePackageResult should not return nil for second package")
+	assert.Len(t, r.PackageResults, 2)
+	assert.NotSame(t, pr1, pr2, "should return different pointer for different key")
 }
 
 func TestCheckDetails_Format(t *testing.T) {
@@ -157,15 +142,9 @@ func TestCheckDetails_Format(t *testing.T) {
 			Diff:          "- old line\n+ new line",
 		}
 		out := d.Format()
-		if !strings.Contains(out, "charts/foo/1.0/values.yaml") {
-			t.Errorf("Format() missing modified file: %s", out)
-		}
-		if !strings.Contains(out, "Diff:") {
-			t.Errorf("Format() missing 'Diff:' header: %s", out)
-		}
-		if !strings.Contains(out, "- old line") {
-			t.Errorf("Format() missing diff content: %s", out)
-		}
+		assert.Contains(t, out, "charts/foo/1.0/values.yaml", "should contain modified file")
+		assert.Contains(t, out, "Diff:", "should contain 'Diff:' header")
+		assert.Contains(t, out, "- old line", "should contain diff content")
 	})
 
 	t.Run("ImageCheckDetails", func(t *testing.T) {
@@ -176,18 +155,10 @@ func TestCheckDetails_Format(t *testing.T) {
 			FilesChecked: 3,
 		}
 		out := d.Format()
-		if !strings.Contains(out, "1") {
-			t.Errorf("Format() missing invalid image count: %s", out)
-		}
-		if !strings.Contains(out, "3") {
-			t.Errorf("Format() missing files checked count: %s", out)
-		}
-		if !strings.Contains(out, "image") {
-			t.Errorf("Format() missing image path: %s", out)
-		}
-		if !strings.Contains(out, "registry=docker.io") {
-			t.Errorf("Format() missing issue description: %s", out)
-		}
+		assert.Contains(t, out, "1", "should contain invalid image count")
+		assert.Contains(t, out, "3", "should contain files checked count")
+		assert.Contains(t, out, "image", "should contain image path")
+		assert.Contains(t, out, "registry=docker.io", "should contain issue description")
 	})
 
 	t.Run("SubchartTagCheckDetails", func(t *testing.T) {
@@ -202,14 +173,8 @@ func TestCheckDetails_Format(t *testing.T) {
 			},
 		}
 		out := d.Format()
-		if !strings.Contains(out, "grafana") {
-			t.Errorf("Format() missing subchart name: %s", out)
-		}
-		if !strings.Contains(out, "9.0.0") {
-			t.Errorf("Format() missing actual value: %s", out)
-		}
-		if !strings.Contains(out, "10.0.0") {
-			t.Errorf("Format() missing expected value: %s", out)
-		}
+		assert.Contains(t, out, "grafana", "should contain subchart name")
+		assert.Contains(t, out, "9.0.0", "should contain actual value")
+		assert.Contains(t, out, "10.0.0", "should contain expected value")
 	})
 }

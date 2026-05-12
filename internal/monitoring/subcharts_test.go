@@ -2,6 +2,8 @@ package monitoring
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNormalizeName(t *testing.T) {
@@ -21,9 +23,7 @@ func TestNormalizeName(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.input, func(t *testing.T) {
 			got := NormalizeName(tc.input)
-			if got != tc.want {
-				t.Errorf("NormalizeName(%q) = %q, want %q", tc.input, got, tc.want)
-			}
+			assert.Equal(t, tc.want, got, "NormalizeName(%q)", tc.input)
 		})
 	}
 }
@@ -51,9 +51,7 @@ func TestTagMatchesExpected(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.actual+"_vs_"+tc.expected, func(t *testing.T) {
 			got := TagMatchesExpected(tc.actual, tc.expected)
-			if got != tc.want {
-				t.Errorf("TagMatchesExpected(%q, %q) = %v, want %v", tc.actual, tc.expected, got, tc.want)
-			}
+			assert.Equal(t, tc.want, got, "TagMatchesExpected(%q, %q)", tc.actual, tc.expected)
 		})
 	}
 }
@@ -94,9 +92,7 @@ func TestSubchartRule_Apply(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rule := SubchartRule{ValuesKey: "image.tag", PrepareFunc: tc.prepareFunc}
 			got := rule.Apply(tc.appVersion)
-			if got != tc.want {
-				t.Errorf("SubchartRule.Apply(%q) = %q, want %q", tc.appVersion, got, tc.want)
-			}
+			assert.Equal(t, tc.want, got, "SubchartRule.Apply(%q)", tc.appVersion)
 		})
 	}
 }
@@ -104,41 +100,21 @@ func TestSubchartRule_Apply(t *testing.T) {
 func TestGetRules(t *testing.T) {
 	t.Run("kube-state-metrics returns custom rules", func(t *testing.T) {
 		rules := GetRules("kube-state-metrics")
-		if len(rules) != 2 {
-			t.Fatalf("GetRules(kube-state-metrics) returned %d rules, want 2", len(rules))
-		}
-		if rules[0].ValuesKey != "image.tag" {
-			t.Errorf("GetRules(kube-state-metrics)[0].ValuesKey = %q, want image.tag", rules[0].ValuesKey)
-		}
-		if got := rules[0].Apply("2.0.0"); got != "v2.0.0" {
-			t.Errorf("kube-state-metrics rules[0].Apply(2.0.0) = %q, want v2.0.0", got)
-		}
-		if rules[1].ValuesKey != "kubeRBACProxy.image.tag" {
-			t.Errorf("GetRules(kube-state-metrics)[1].ValuesKey = %q, want kubeRBACProxy.image.tag", rules[1].ValuesKey)
-		}
-		if got := rules[1].Apply("2.0.0"); got != "v2.0.0" {
-			t.Errorf("kube-state-metrics rules[1].Apply(2.0.0) = %q, want v2.0.0", got)
-		}
+		assert.Len(t, rules, 1, "GetRules(kube-state-metrics)")
+		assert.Equal(t, "image.tag", rules[0].ValuesKey)
+		assert.Equal(t, "v2.0.0", rules[0].Apply("2.0.0"))
 	})
 
 	t.Run("grafana returns DefaultRules", func(t *testing.T) {
 		rules := GetRules("grafana")
-		if len(rules) != len(DefaultRules) {
-			t.Fatalf("GetRules(grafana) returned %d rules, want %d (DefaultRules)", len(rules), len(DefaultRules))
-		}
-		if rules[0].ValuesKey != "image.tag" {
-			t.Errorf("GetRules(grafana)[0].ValuesKey = %q, want image.tag", rules[0].ValuesKey)
-		}
-		if rules[0].PrepareFunc != nil {
-			t.Errorf("GetRules(grafana)[0].PrepareFunc should be nil for default rule")
-		}
+		assert.Len(t, rules, len(DefaultRules), "GetRules(grafana)")
+		assert.Equal(t, "image.tag", rules[0].ValuesKey)
+		assert.Nil(t, rules[0].PrepareFunc, "default rule should have nil PrepareFunc")
 	})
 
 	t.Run("unknown subchart returns DefaultRules", func(t *testing.T) {
 		rules := GetRules("some-unknown-chart")
-		if len(rules) != len(DefaultRules) {
-			t.Fatalf("GetRules(unknown) returned %d rules, want %d", len(rules), len(DefaultRules))
-		}
+		assert.Len(t, rules, len(DefaultRules))
 	})
 }
 
@@ -207,12 +183,8 @@ func TestNavigateYAMLPath(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, found := NavigateYAMLPath(tc.data, tc.keyPath)
-			if found != tc.wantFound {
-				t.Errorf("NavigateYAMLPath found=%v, want %v", found, tc.wantFound)
-			}
-			if got != tc.wantVal {
-				t.Errorf("NavigateYAMLPath val=%q, want %q", got, tc.wantVal)
-			}
+			assert.Equal(t, tc.wantFound, found, "NavigateYAMLPath found")
+			assert.Equal(t, tc.wantVal, got, "NavigateYAMLPath value")
 		})
 	}
 }
@@ -259,13 +231,9 @@ func TestNavigateYAMLMap(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, ok := NavigateYAMLMap(tc.data, tc.keyPath)
-			if ok != tc.wantOk {
-				t.Errorf("NavigateYAMLMap ok=%v, want %v", ok, tc.wantOk)
-			}
+			assert.Equal(t, tc.wantOk, ok, "NavigateYAMLMap ok")
 			if tc.wantOk && tc.wantKey != "" {
-				if _, exists := got[tc.wantKey]; !exists {
-					t.Errorf("NavigateYAMLMap result missing expected key %q", tc.wantKey)
-				}
+				assert.Contains(t, got, tc.wantKey, "NavigateYAMLMap result should contain key")
 			}
 		})
 	}
@@ -311,8 +279,7 @@ func TestCheckTagsInValues(t *testing.T) {
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.17.0",
 			values: map[string]any{
-				"image":         map[string]any{"tag": "2.17.0-10.11"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.17.0"}},
+				"image": map[string]any{"tag": "2.17.0-10.11"},
 			},
 			wantMismatches: 0,
 		},
@@ -335,23 +302,11 @@ func TestCheckTagsInValues(t *testing.T) {
 			wantActual:     "(not found)",
 		},
 		{
-			// After v-normalization "2.10.0" matches "v2.10.0"; only kubeRBACProxy is absent.
-			name:           "kube-state-metrics: no-v image.tag passes, missing kubeRBACProxy fails",
-			normalizedName: "kube-state-metrics",
-			appVersion:     "2.10.0",
-			values:         map[string]any{"image": map[string]any{"tag": "2.10.0"}},
-			wantMismatches: 1,
-			wantKey:        "kubeRBACProxy.image.tag",
-			wantActual:     "(not found)",
-			wantExpected:   "v2.10.0",
-		},
-		{
 			name:           "kube-state-metrics: completely wrong image.tag version",
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.10.0",
 			values: map[string]any{
-				"image":         map[string]any{"tag": "1.0.0"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.10.0"}},
+				"image": map[string]any{"tag": "1.0.0"},
 			},
 			wantMismatches: 1,
 			wantKey:        "image.tag",
@@ -363,23 +318,9 @@ func TestCheckTagsInValues(t *testing.T) {
 			normalizedName: "kube-state-metrics",
 			appVersion:     "2.10.0",
 			values: map[string]any{
-				"image":         map[string]any{"tag": "v2.10.0"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "v2.10.0"}},
+				"image": map[string]any{"tag": "v2.10.0"},
 			},
 			wantMismatches: 0,
-		},
-		{
-			name:           "kube-state-metrics: kubeRBACProxy tag mismatch is caught",
-			normalizedName: "kube-state-metrics",
-			appVersion:     "2.10.0",
-			values: map[string]any{
-				"image":         map[string]any{"tag": "v2.10.0"},
-				"kubeRBACProxy": map[string]any{"image": map[string]any{"tag": "0.20.1-16.14"}},
-			},
-			wantMismatches: 1,
-			wantKey:        "kubeRBACProxy.image.tag",
-			wantActual:     "0.20.1-16.14",
-			wantExpected:   "v2.10.0",
 		},
 		{
 			name:           "node-exporter: uses DefaultRules, matching",
@@ -399,20 +340,17 @@ func TestCheckTagsInValues(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mismatches := CheckTagsInValues(tc.normalizedName, tc.appVersion, tc.values)
-			if len(mismatches) != tc.wantMismatches {
-				t.Errorf("CheckTagsInValues returned %d mismatches, want %d: %+v", len(mismatches), tc.wantMismatches, mismatches)
-				return
-			}
+			assert.Len(t, mismatches, tc.wantMismatches, "CheckTagsInValues mismatches: %+v", mismatches)
 			if tc.wantMismatches == 1 {
 				m := mismatches[0]
-				if tc.wantKey != "" && m.ValuesKey != tc.wantKey {
-					t.Errorf("mismatch.ValuesKey = %q, want %q", m.ValuesKey, tc.wantKey)
+				if tc.wantKey != "" {
+					assert.Equal(t, tc.wantKey, m.ValuesKey)
 				}
-				if tc.wantActual != "" && m.ActualValue != tc.wantActual {
-					t.Errorf("mismatch.ActualValue = %q, want %q", m.ActualValue, tc.wantActual)
+				if tc.wantActual != "" {
+					assert.Equal(t, tc.wantActual, m.ActualValue)
 				}
-				if tc.wantExpected != "" && m.ExpectedValue != tc.wantExpected {
-					t.Errorf("mismatch.ExpectedValue = %q, want %q", m.ExpectedValue, tc.wantExpected)
+				if tc.wantExpected != "" {
+					assert.Equal(t, tc.wantExpected, m.ExpectedValue)
 				}
 			}
 		})

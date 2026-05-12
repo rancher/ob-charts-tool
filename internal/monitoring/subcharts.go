@@ -35,7 +35,6 @@ var SubchartRules = map[string][]SubchartRule{
 	// is empty, so Rancher patches must explicitly set both to the appVersion with a "v" prefix.
 	"kube-state-metrics": {
 		{ValuesKey: "image.tag", PrepareFunc: func(v string) string { return "v" + v }},
-		{ValuesKey: "kubeRBACProxy.image.tag", PrepareFunc: func(v string) string { return "v" + v }},
 	},
 }
 

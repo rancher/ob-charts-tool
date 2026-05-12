@@ -220,10 +220,11 @@ type PackageVersionInfo struct {
 // getPackageYAMLPath returns the path to package.yaml for a given package.
 // Handles package-specific directory structures.
 func getPackageYAMLPath(repoPath string, pkg PackageInfo) string {
-	if pkg.Name == "rancher-monitoring" {
+	if pkg.Name == "rancher-monitoring" || pkg.Name == "kube-prometheus-stack" {
 		// rancher-monitoring has a subdirectory with the package name
 		return filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, pkg.Name, "package.yaml")
 	}
+
 	// rancher-logging, rancher-project-monitoring, etc. have package.yaml at version root
 	return filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, "package.yaml")
 }
@@ -542,6 +543,15 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 	if err != nil {
 		check.Passed = false
 		check.Message = err.Error()
+		return check
+	}
+
+	if pkg.Name == "kube-prometheus-stack" {
+		// Skip package images check for kube-prometheus-stack because it should not have images modified at all
+		// The version of the package is only a slightly modified version of the upstream chart
+		check.Passed = true
+		check.Critical = false
+		check.Message = "Skipping package images check for kube-prometheus-stack"
 		return check
 	}
 
