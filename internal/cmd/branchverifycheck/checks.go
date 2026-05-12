@@ -547,6 +547,8 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 	}
 
 	if pkg.Name == "kube-prometheus-stack" {
+		// Skip package images check for kube-prometheus-stack because it should not have images modified at all
+		// The version of the package is only a slightly modified version of the upstream chart
 		check.Passed = true
 		check.Critical = false
 		check.Message = "Skipping package images check for kube-prometheus-stack"
