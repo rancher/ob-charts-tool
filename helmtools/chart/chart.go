@@ -24,7 +24,7 @@ func ParseChartYAML(data []byte) (*Chart, error) {
 // Returns an empty slice if the chart has no dependencies.
 func FindDependencies(chart *Chart) []Dependency {
 	if chart == nil || len(chart.Dependencies) == 0 {
-		return nil
+		return []Dependency{}
 	}
 
 	return util.FilterSlice(chart.Dependencies, func(dep Dependency) bool {
