@@ -5,8 +5,8 @@ cd $(dirname $0)/..
 
 echo "Running golang tests..."
 
-# Run unit tests (excluding integration tests)
+# Run all unit tests (integration tests are excluded via build tags)
 # Integration tests require network access and must be run separately via:
 #   ./scripts/test-integration
 #   make test-integration
-go test -cover -tags=test ./...
+go test -cover ./...
