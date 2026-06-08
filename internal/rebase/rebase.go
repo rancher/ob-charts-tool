@@ -22,20 +22,23 @@ func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) Sta
 		},
 	}
 
-	rebaseRequest.FetchChart()
+	if err := rebaseRequest.FetchChart(); err != nil {
+		log.Fatalf("Failed to fetch chart: %v", err)
+	}
 	rebaseRequest.FindAppVersion()
 	rebaseRequest.FindChartDeps()
 
 	return rebaseRequest
 }
 
-func (s *StartRequest) FetchChart() {
+func (s *StartRequest) FetchChart() error {
 	s.FoundChart.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.FoundChart.CommitHash)
 	body, err := util.GetHTTPBody(s.FoundChart.ChartFileURL)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.targetChart = body
+	return nil
 }
 
 func (s *StartRequest) FindAppVersion() {

@@ -24,7 +24,11 @@ func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 	}
 
 	chartChartURL := upstream.BuildChartYAMLURL(chartDep.Name, "TODO-hash")
-	chartVersion, appVersion := findChartVersionInfo(chartChartURL)
+	chartVersion, appVersion, err := findChartVersionInfo(chartChartURL)
+	if err != nil {
+		log.Errorf("Failed to find chart version info for %s: %v", chartDep.Name, err)
+		return nil
+	}
 
 	return &DependencyChartVersion{
 		Name:         chartDep.Name,
@@ -61,18 +65,18 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 	return found, &plumbing.Reference{} // TODO: Refactor this function
 }
 
-func findChartVersionInfo(chartFileURL string) (string, string) {
+func findChartVersionInfo(chartFileURL string) (string, string, error) {
 	body, err := util.GetHTTPBody(chartFileURL)
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 
 	var chartMeta ChartMetaData
 	if err := yaml.Unmarshal(body, &chartMeta); err != nil {
-		panic(err)
+		return "", "", err
 	}
 
-	return chartMeta.Version, chartMeta.AppVersion
+	return chartMeta.Version, chartMeta.AppVersion, nil
 }
 
 func (s *ChartRebaseInfo) FindChartsContainers() error {
@@ -115,14 +119,18 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 		imageResolver.appVersion = chartDep.AppVersion
 	}
 
-	imageResolver.fetchChartValues(valuesFileURL)
+	err := imageResolver.fetchChartValues(valuesFileURL)
+	if err != nil {
+		log.Errorf("Failed to fetch chart values from %s: %v", valuesFileURL, err)
+		return
+	}
 
 	// Use the heuristic sweep for all charts so that every image in values.yaml is
 	// captured in rebase.yaml, not just the subset that branchverifycheck happens to
 	// verify against appVersion.  Rule-based extraction is the right tool for
 	// branchverifycheck (targeted version assertions), but rebase info needs the full
 	// picture of all images that may need updating.
-	err := imageResolver.extractChartValuesImages()
+	err = imageResolver.extractChartValuesImages()
 	if err != nil {
 		log.Error(err)
 		log.Exit(1)
@@ -141,12 +149,13 @@ type chartImagesResolver struct {
 	chartImagesList  *util.Set[ChartImage]
 }
 
-func (cir *chartImagesResolver) fetchChartValues(valuesURL string) {
+func (cir *chartImagesResolver) fetchChartValues(valuesURL string) error {
 	body, err := util.GetHTTPBody(valuesURL)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cir.chartValuesData = body
+	return nil
 }
 
 func (cir *chartImagesResolver) extractChartValuesImages() error {
