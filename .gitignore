@@ -3,3 +3,5 @@ dist/
 bin/
 .idea/
 ob-charts-tool
+go.work
+go.work.sum
