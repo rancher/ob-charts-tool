@@ -15,5 +15,5 @@
 //	highestTag := git.FindHighestVersionTag(tags, "kube-prometheus-stack")
 //
 // All Git operations use go-git for remote repository access and do not require
-// a local clone.
+// a local clone. Functions accept a context.Context for cancellation and timeout support.
 package git

@@ -99,7 +99,7 @@ func TestFetchURL_Validation(t *testing.T) {
 
 func TestFetchURL_CustomClient(t *testing.T) {
 	t.Run("uses custom HTTP client", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("custom client response"))
 		}))
@@ -119,7 +119,7 @@ func TestFetchURL_CustomClient(t *testing.T) {
 	})
 
 	t.Run("nil client uses default client", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("default client response"))
 		}))
@@ -137,7 +137,7 @@ func TestFetchURL_CustomClient(t *testing.T) {
 
 func TestFetchURL_Context(t *testing.T) {
 	t.Run("context cancellation", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			// Simulate slow response
 			time.Sleep(100 * time.Millisecond)
 			w.Write([]byte("should not receive this"))
@@ -157,7 +157,7 @@ func TestFetchURL_Context(t *testing.T) {
 	})
 
 	t.Run("context timeout", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			// Simulate slow response
 			time.Sleep(200 * time.Millisecond)
 			w.Write([]byte("should not receive this"))
@@ -174,7 +174,7 @@ func TestFetchURL_Context(t *testing.T) {
 	})
 
 	t.Run("context with deadline passes", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("fast response"))
 		}))
 		defer server.Close()
@@ -217,7 +217,7 @@ func TestFetchURL_HTTPErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 				w.Write([]byte("error response"))
 			}))
@@ -287,7 +287,7 @@ func TestFetchURL_NetworkErrors(t *testing.T) {
 
 func TestFetchURL_ReadBodyError(t *testing.T) {
 	t.Run("server closes connection early", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Length", "100")
 			w.WriteHeader(http.StatusOK)
 			// Write less data than Content-Length indicates
@@ -305,15 +305,9 @@ func TestFetchURL_ReadBodyError(t *testing.T) {
 	})
 }
 
-type errorReader struct{}
-
-func (e *errorReader) Read(p []byte) (n int, err error) {
-	return 0, errors.New("read error")
-}
-
 func TestFetchURL_CustomTransport(t *testing.T) {
 	t.Run("custom transport with headers", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			// Verify custom headers could be set via transport
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("transport response"))
@@ -339,7 +333,7 @@ func TestFetchURL_CustomTransport(t *testing.T) {
 func TestFetchURL_ConcurrentRequests(t *testing.T) {
 	t.Run("concurrent fetches to same server", func(t *testing.T) {
 		requestChan := make(chan struct{}, 5)
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			requestChan <- struct{}{}
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("concurrent response"))
@@ -375,7 +369,7 @@ func TestFetchURL_ConcurrentRequests(t *testing.T) {
 func TestFetchURL_BinaryData(t *testing.T) {
 	t.Run("fetch binary data", func(t *testing.T) {
 		binaryData := []byte{0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/octet-stream")
 			w.WriteHeader(http.StatusOK)
 			w.Write(binaryData)
@@ -399,7 +393,7 @@ func TestFetchURL_BinaryData(t *testing.T) {
 
 func TestFetchURL_Redirects(t *testing.T) {
 	t.Run("follows redirects", func(t *testing.T) {
-		finalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		finalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("final destination"))
 		}))

@@ -31,10 +31,14 @@ linters:
               desc: "helmtools must not import CLI frameworks"
             - pkg: "github.com/spf13/viper"
               desc: "helmtools must not import CLI frameworks"
+            - pkg: "github.com/urfave/cli"
+              desc: "helmtools must not import CLI frameworks"
             - pkg: "github.com/sirupsen/logrus"
               desc: "helmtools must not import logging frameworks - return errors instead"
             - pkg: "github.com/rancher/ob-charts-tool/cmd"
               desc: "helmtools must not import cmd packages"
+            - pkg: "github.com/rancher/ob-charts-tool/internal"
+              desc: "helmtools must not import internal packages"
 
   exclusions:
     generated: lax

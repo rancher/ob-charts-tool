@@ -138,6 +138,46 @@ chart, err := client.FetchChartYAML(ctx, url)
 
 Full API documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/rancher/ob-charts-tool/helmtools).
 
+## Testing
+
+### Unit Tests
+
+Run unit tests (no network required):
+
+```bash
+go test ./helmtools/...
+```
+
+With coverage:
+
+```bash
+go test -cover ./helmtools/...
+```
+
+### Integration Tests
+
+Integration tests make real network calls to public Git repositories. Run them separately:
+
+```bash
+go test -tags=integration ./helmtools/git/
+```
+
+Or use the make target:
+
+```bash
+make test-integration
+```
+
+**Note:** Integration tests are skipped in short mode (`go test -short`).
+
+### Race Detection
+
+Verify thread safety with the race detector:
+
+```bash
+go test -race ./helmtools/...
+```
+
 ## Contributing
 
 This package is part of the [ob-charts-tool](https://github.com/rancher/ob-charts-tool) project. Contributions are welcome!
