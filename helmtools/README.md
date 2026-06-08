@@ -178,6 +178,18 @@ Verify thread safety with the race detector:
 go test -race ./helmtools/...
 ```
 
+## Versioning
+
+This library follows [semantic versioning](https://semver.org/). Releases are tagged as `helmtools/vX.Y.Z`.
+
+To use a specific version:
+
+```bash
+go get github.com/rancher/ob-charts-tool/helmtools@v0.1.0
+```
+
+See the [main repository VERSIONS.md](../VERSIONS.md) for release process details.
+
 ## Contributing
 
 This package is part of the [ob-charts-tool](https://github.com/rancher/ob-charts-tool) project. Contributions are welcome!

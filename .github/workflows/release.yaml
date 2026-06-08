@@ -3,7 +3,7 @@ name : Publish artifacts (via goreleaser)
 on:
   push:
     tags:
-      - "*"
+      - "v*"  # CLI releases only (helmtools/* tags don't need binary builds)
 
 permissions:
   contents: write
