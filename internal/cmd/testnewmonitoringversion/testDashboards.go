@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"slices"
@@ -247,7 +247,7 @@ func TestDashboard(dashboard map[string]interface{}, rancherURL, sessionToken st
 			}
 			defer resp.Body.Close()
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				currentPanelResults = append(currentPanelResults, QueryResult{
 					Expr:   expr,

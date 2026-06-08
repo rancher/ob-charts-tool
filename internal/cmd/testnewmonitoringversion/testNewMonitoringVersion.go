@@ -6,7 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sort"
 	"time"
@@ -86,11 +86,11 @@ func GetPreviousVersion(currentVersion, rancherURL, sessionToken, clusterRepo st
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("failed to fetch helm index, status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read helm index body: %w", err)
 	}
@@ -193,7 +193,7 @@ func InstallCurrentVersion(chartVersion, rancherURL, sessionToken, clusterRepo s
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("failed to install chart, status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 
@@ -235,7 +235,7 @@ func UninstallChart(chartName, namespace, rancherURL, sessionToken string) error
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("failed to uninstall chart, status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 
