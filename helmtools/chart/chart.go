@@ -9,6 +9,9 @@ import (
 
 // ParseChartYAML parses Chart.yaml bytes into a Chart struct.
 func ParseChartYAML(data []byte) (*Chart, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("chart data cannot be empty")
+	}
 	var chart Chart
 	err := yaml.Unmarshal(data, &chart)
 	if err != nil {

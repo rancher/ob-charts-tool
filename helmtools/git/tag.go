@@ -16,6 +16,12 @@ import (
 // Returns (exists bool, ref string, hash string, error).
 // The context parameter is currently unused but reserved for future use when go-git supports it.
 func VerifyTagExists(_ context.Context, repoURL string, tag string) (bool, string, string, error) {
+	if repoURL == "" {
+		return false, "", "", fmt.Errorf("repository URL cannot be empty")
+	}
+	if tag == "" {
+		return false, "", "", fmt.Errorf("tag cannot be empty")
+	}
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{repoURL}})
 	// TODO: Pass context to List when go-git v5 supports it
 	refs, err := remote.List(&git.ListOptions{})
@@ -37,6 +43,12 @@ func VerifyTagExists(_ context.Context, repoURL string, tag string) (bool, strin
 // Returns (found bool, matching tags, error).
 // The context parameter is currently unused but reserved for future use when go-git supports it.
 func FindMatchingTags(_ context.Context, repoURL string, tagPartial string) (bool, []Tag, error) {
+	if repoURL == "" {
+		return false, nil, fmt.Errorf("repository URL cannot be empty")
+	}
+	if tagPartial == "" {
+		return false, nil, fmt.Errorf("tag pattern cannot be empty")
+	}
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{repoURL}})
 	// TODO: Pass context to List when go-git v5 supports it
 	refs, err := remote.List(&git.ListOptions{})
@@ -69,6 +81,12 @@ func FindMatchingTags(_ context.Context, repoURL string, tagPartial string) (boo
 // from the provided tags, filtering by the given prefix.
 // Returns nil if no valid version tags are found.
 func FindHighestVersionTag(tags []Tag, componentPrefix string) *Tag {
+	if len(tags) == 0 {
+		return nil
+	}
+	if componentPrefix == "" {
+		return nil
+	}
 	var highestTag *Tag
 	var highestVersion *semver.Version
 

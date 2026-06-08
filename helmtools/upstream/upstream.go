@@ -20,7 +20,11 @@ func IdentifyRepository(chartName string) Repository {
 }
 
 // BuildChartYAMLURL builds the raw GitHub URL for a chart's Chart.yaml file.
+// Returns empty string if chartName or commitHash is empty.
 func BuildChartYAMLURL(chartName string, commitHash string) string {
+	if chartName == "" || commitHash == "" {
+		return ""
+	}
 	repo := IdentifyRepository(chartName)
 	switch repo {
 	case RepositoryGrafana:
@@ -33,7 +37,11 @@ func BuildChartYAMLURL(chartName string, commitHash string) string {
 }
 
 // BuildValuesYAMLURL builds the raw GitHub URL for a chart's values.yaml file.
+// Returns empty string if chartName or commitHash is empty.
 func BuildValuesYAMLURL(chartName string, commitHash string) string {
+	if chartName == "" || commitHash == "" {
+		return ""
+	}
 	repo := IdentifyRepository(chartName)
 	switch repo {
 	case RepositoryGrafana:

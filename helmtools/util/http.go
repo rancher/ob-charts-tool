@@ -11,6 +11,9 @@ import (
 // If client is nil, http.DefaultClient is used.
 // The context can be used for cancellation and timeouts.
 func GetHTTPBody(ctx context.Context, client *http.Client, url string) ([]byte, error) {
+	if url == "" {
+		return nil, fmt.Errorf("url cannot be empty")
+	}
 	if client == nil {
 		client = http.DefaultClient
 	}

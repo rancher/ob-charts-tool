@@ -25,6 +25,9 @@ func NewClient(httpClient *http.Client) *Client {
 // FetchChartYAML fetches Chart.yaml from a URL and parses it using the client's HTTP configuration.
 // The context can be used for cancellation and timeouts.
 func (c *Client) FetchChartYAML(ctx context.Context, url string) (*Chart, error) {
+	if url == "" {
+		return nil, fmt.Errorf("url cannot be empty")
+	}
 	body, err := util.GetHTTPBody(ctx, c.httpClient, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Chart.yaml from %s: %w", url, err)
