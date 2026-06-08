@@ -174,7 +174,7 @@ func TestSet_Map(t *testing.T) {
 		require.NoError(t, s.Add(2))
 		require.NoError(t, s.Add(3))
 
-		result := s.Map(func(n int) int { return 42 })
+		result := s.Map(func(_ int) int { return 42 })
 
 		assert.Equal(t, 1, result.Size(), "all mapped to same value")
 		assert.True(t, result.Contains(42))

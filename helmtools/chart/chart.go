@@ -28,12 +28,12 @@ func FetchChartYAML(url string) (*Chart, error) {
 
 // FindDependencies extracts the dependencies from a chart, filtering out "crds".
 // Returns an empty slice if the chart has no dependencies.
-func FindDependencies(chart *Chart) []ChartDependency {
+func FindDependencies(chart *Chart) []Dependency {
 	if chart == nil || len(chart.Dependencies) == 0 {
 		return nil
 	}
 
-	return util.FilterSlice(chart.Dependencies, func(dep ChartDependency) bool {
+	return util.FilterSlice(chart.Dependencies, func(dep Dependency) bool {
 		return dep.Name != "crds"
 	})
 }
