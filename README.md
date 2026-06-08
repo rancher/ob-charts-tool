@@ -40,15 +40,25 @@ This project uses Go workspaces with two modules:
 - Root module: CLI tool (`github.com/rancher/ob-charts-tool`)
 - Helmtools module: Reusable library (`github.com/rancher/ob-charts-tool/helmtools`)
 
-```bash
-# Run all tests
-go test ./...
+**Setup workspace** (one-time, after cloning):
 
-# Run linter
-golangci-lint run ./...
+```bash
+go work init . ./helmtools
+```
+
+This allows tests and linting to work across both modules. The `go.work` file is gitignored and only needed locally (CI sets it up automatically).
+
+**Run tests and linting:**
+
+```bash
+# Run all tests (both modules)
+make test
+
+# Run linter (both modules)  
+make validate
 
 # Run integration tests (requires network)
-go test -tags=integration ./helmtools/git/
+make test-integration
 ```
 
 ### Making Changes
