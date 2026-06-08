@@ -12,6 +12,30 @@ linters:
     - revive
     - unused
     - unparam
+    - depguard
+  settings:
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          deny:
+            - pkg: "io/ioutil"
+              desc: "Use os and io packages instead (deprecated since Go 1.16)"
+
+        # Prevent CLI frameworks and internal packages in helmtools
+        helmtools-boundaries:
+          files:
+            - "**/helmtools/**/*.go"
+          deny:
+            - pkg: "github.com/spf13/cobra"
+              desc: "helmtools must not import CLI frameworks"
+            - pkg: "github.com/spf13/viper"
+              desc: "helmtools must not import CLI frameworks"
+            - pkg: "github.com/sirupsen/logrus"
+              desc: "helmtools must not import logging frameworks - return errors instead"
+            - pkg: "github.com/rancher/ob-charts-tool/cmd"
+              desc: "helmtools must not import cmd packages"
+
   exclusions:
     generated: lax
     paths:
