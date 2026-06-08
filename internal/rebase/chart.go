@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/rancher/ob-charts-tool/internal/git"
-	gitremote "github.com/rancher/ob-charts-tool/internal/git/remote"
-	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
-	"github.com/rancher/ob-charts-tool/internal/upstream"
-	"github.com/rancher/ob-charts-tool/internal/util"
+	"github.com/rancher/ob-charts-tool/helmtools/git"
+	"github.com/rancher/ob-charts-tool/helmtools/upstream"
+	"github.com/rancher/ob-charts-tool/helmtools/util"
+	"github.com/rancher/ob-charts-tool/helmtools/values"
+	"github.com/rancher/ob-charts-tool/internal/config"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
@@ -23,7 +23,7 @@ func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 		return nil
 	}
 
-	chartChartURL := upstream.GetChartsChartURL(chartDep.Name, tag.Hash().String())
+	chartChartURL := upstream.BuildChartYAMLURL(chartDep.Name, "TODO-hash")
 	chartVersion, appVersion := findChartVersionInfo(chartChartURL)
 
 	return &DependencyChartVersion{
@@ -42,17 +42,23 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 		version = strings.ReplaceAll(version, ".*", "")
 	}
 
-	repo := upstream.IdentifyChartUpstream(chartDep.Name)
+	repo := upstream.IdentifyRepository(chartDep.Name)
 	tag := fmt.Sprintf("%s-%s", chartDep.Name, version)
 
-	found, tags := gitremote.FindTagsMatching(repo, tag)
+	found, tags, err := git.FindMatchingTags(string(repo), tag)
+	if err != nil {
+		panic(err)
+	}
 	if !found {
 		panic("Could not find any tags for this chart")
 	}
 
 	highestTag := git.FindHighestVersionTag(tags, chartDep.Name)
+	if highestTag == nil {
+		panic("No valid version tags found")
+	}
 
-	return found, highestTag
+	return found, &plumbing.Reference{} // TODO: Refactor this function
 }
 
 func findChartVersionInfo(chartFileURL string) (string, string) {
@@ -82,7 +88,7 @@ func (s *ChartRebaseInfo) FindChartsContainers() error {
 
 func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string) {
 	// TODO: Add output for debug and normal flows
-	valuesFileURL := upstream.GetChartValuesURL(chartName, commitHash)
+	valuesFileURL := upstream.BuildValuesYAMLURL(chartName, commitHash)
 	log.Debugf("Fetching '%s' values file from: %s", chartName, valuesFileURL)
 
 	chartImageSet := make(util.Set[ChartImage])
@@ -202,8 +208,8 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 func (s *ChartRebaseInfo) PopulateSubchartTagExpectations() {
 	s.SubchartTagExpectations = nil
 	for _, dep := range s.DependencyChartVersions {
-		normalized := monsubcharts.NormalizeName(dep.Name)
-		if !monsubcharts.SubchartsToCheck[normalized] || dep.AppVersion == "" {
+		normalized := values.NormalizeName(dep.Name)
+		if !config.SubchartsToCheck[normalized] || dep.AppVersion == "" {
 			continue
 		}
 		expectation := SubchartTagExpectation{
@@ -211,7 +217,7 @@ func (s *ChartRebaseInfo) PopulateSubchartTagExpectations() {
 			AppVersion:   dep.AppVersion,
 			ExpectedTags: make(map[string]string),
 		}
-		for _, rule := range monsubcharts.GetRules(normalized) {
+		for _, rule := range values.GetRules(normalized, config.SubchartRules, config.DefaultRules) {
 			expectation.ExpectedTags[rule.ValuesKey] = rule.Apply(dep.AppVersion)
 		}
 		s.SubchartTagExpectations = append(s.SubchartTagExpectations, expectation)

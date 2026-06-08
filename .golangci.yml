@@ -18,15 +18,29 @@ linters:
     - revive
     - unused
     - unparam
+    # TODO: Re-enable depguard with proper config for helmtools package boundaries
+    # - depguard
   exclusions:
     generated: lax
     paths:
       - third_party$
       - builtin$
       - examples$
-      - internal/util
     presets:
       - comments
       - common-false-positives
       - legacy
       - std-error-handling
+
+linters-settings:
+  depguard:
+    rules:
+      main:
+        list-mode: lax
+        files:
+          - "$all"
+          - "!$test"
+        deny:
+          # These packages should not be used anywhere
+          - pkg: "io/ioutil"
+            desc: "io/ioutil is deprecated, use io or os packages"

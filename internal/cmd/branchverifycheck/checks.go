@@ -11,8 +11,10 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
+	"github.com/rancher/ob-charts-tool/helmtools/values"
+	"github.com/rancher/ob-charts-tool/helmtools/version"
+	"github.com/rancher/ob-charts-tool/internal/config"
 	gitpkg "github.com/rancher/ob-charts-tool/internal/git"
-	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
 	"gopkg.in/yaml.v3"
 )
 
@@ -716,8 +718,8 @@ func CheckSubchartAppVersionTags(repoPath string, pkg PackageInfo) CheckResult {
 			continue
 		}
 		dirName := entry.Name()
-		normalizedName := monsubcharts.NormalizeName(dirName)
-		if !monsubcharts.SubchartsToCheck[normalizedName] {
+		normalizedName := values.NormalizeName(dirName)
+		if !config.SubchartsToCheck[normalizedName] {
 			continue
 		}
 
@@ -745,7 +747,8 @@ func CheckSubchartAppVersionTags(repoPath string, pkg PackageInfo) CheckResult {
 			continue
 		}
 
-		for _, m := range monsubcharts.CheckTagsInValues(normalizedName, chartMeta.AppVersion, valuesData) {
+		rules := values.GetRules(normalizedName, config.SubchartRules, config.DefaultRules)
+		for _, m := range version.CheckTagsInValues(rules, chartMeta.AppVersion, valuesData) {
 			mismatches = append(mismatches, SubchartTagMismatch{
 				SubchartName:  dirName,
 				ValuesKey:     m.ValuesKey,

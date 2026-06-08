@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rancher/ob-charts-tool/helmtools/git"
+	"github.com/rancher/ob-charts-tool/helmtools/upstream"
 	"github.com/rancher/ob-charts-tool/internal/rebase"
-	"github.com/rancher/ob-charts-tool/internal/upstream"
 
 	"github.com/jedib0t/go-pretty/text"
 	log "github.com/sirupsen/logrus"
 )
 
 func VerifyTagExists(tag string) (string, string) {
-	exists := false
-	var tagRef string
-	var hash string
-	if exists, tagRef, hash = upstream.PrometheusChartVersionExists(tag); !exists {
+	// Construct the full tag name for kube-prometheus-stack
+	fullTag := fmt.Sprintf("kube-prometheus-stack-%s", tag)
+	exists, tagRef, hash, err := git.VerifyTagExists(string(upstream.RepositoryPrometheus), fullTag)
+	if err != nil || !exists {
 		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", tag)
 		fmt.Println(
 			text.AlignCenter.Apply(
