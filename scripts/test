@@ -9,4 +9,10 @@ echo "Running golang tests..."
 # Integration tests require network access and must be run separately via:
 #   ./scripts/test-integration
 #   make test-integration
+
+echo "Testing root module..."
 go test -cover ./...
+
+echo ""
+echo "Testing helmtools module..."
+go test -cover ./helmtools/...
