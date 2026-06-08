@@ -34,7 +34,7 @@ func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) Sta
 
 func (s *StartRequest) FetchChart() error {
 	s.FoundChart.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.FoundChart.CommitHash)
-	body, err := util.GetHTTPBody(context.Background(), nil, s.FoundChart.ChartFileURL)
+	body, err := util.FetchURL(context.Background(), nil, s.FoundChart.ChartFileURL)
 	if err != nil {
 		return err
 	}

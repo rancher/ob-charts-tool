@@ -112,7 +112,6 @@ chart, err := client.FetchChartYAML(ctx, url)
 - **`chart`**: Parse and fetch Helm Chart.yaml files
 - **`git`**: Query Git repositories for Helm chart tags and versions
 - **`image`**: Extract container images from Helm values.yaml files
-- **`upstream`**: Work with upstream chart repositories (Prometheus, Grafana)
 - **`values`**: Navigate and manipulate Helm values.yaml structure
 - **`version`**: Version comparison utilities
 - **`util`**: Shared utilities (HTTP, sets, slices)

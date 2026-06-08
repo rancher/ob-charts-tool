@@ -749,7 +749,7 @@ func CheckSubchartAppVersionTags(repoPath string, pkg PackageInfo) CheckResult {
 		}
 
 		rules := values.GetRules(normalizedName, config.SubchartRules, config.DefaultRules)
-		for _, m := range version.CheckTagsInValues(rules, chartMeta.AppVersion, valuesData) {
+		for _, m := range version.VerifyTagsInValues(rules, chartMeta.AppVersion, valuesData) {
 			mismatches = append(mismatches, SubchartTagMismatch{
 				SubchartName:  dirName,
 				ValuesKey:     m.ValuesKey,

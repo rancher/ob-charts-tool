@@ -15,6 +15,7 @@ type Client struct {
 
 // NewClient creates a new chart Client with the given HTTP client.
 // If httpClient is nil, http.DefaultClient is used.
+// The returned Client is safe for concurrent use.
 func NewClient(httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
@@ -28,7 +29,7 @@ func (c *Client) FetchChartYAML(ctx context.Context, url string) (*Chart, error)
 	if url == "" {
 		return nil, fmt.Errorf("url cannot be empty")
 	}
-	body, err := util.GetHTTPBody(ctx, c.httpClient, url)
+	body, err := util.FetchURL(ctx, c.httpClient, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Chart.yaml from %s: %w", url, err)
 	}

@@ -4,7 +4,7 @@
 //
 // Fetch URL body:
 //
-//	body, err := util.GetHTTPBody(ctx, url, httpClient)
+//	body, err := util.FetchURL(ctx, httpClient, url)
 //
 // # Set Operations
 //
@@ -24,4 +24,6 @@
 //	evens := util.FilterSlice(numbers, func(n int) bool {
 //		return n%2 == 0
 //	})
+//
+// FilterSlice is safe for concurrent use.
 package util

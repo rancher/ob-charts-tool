@@ -7,10 +7,10 @@ import (
 	"net/http"
 )
 
-// GetHTTPBody fetches the body of an HTTP GET request.
+// FetchURL fetches the body of an HTTP GET request.
 // If client is nil, http.DefaultClient is used.
 // The context can be used for cancellation and timeouts.
-func GetHTTPBody(ctx context.Context, client *http.Client, url string) ([]byte, error) {
+func FetchURL(ctx context.Context, client *http.Client, url string) ([]byte, error) {
 	if url == "" {
 		return nil, fmt.Errorf("url cannot be empty")
 	}

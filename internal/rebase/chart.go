@@ -68,7 +68,7 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 }
 
 func findChartVersionInfo(chartFileURL string) (string, string, error) {
-	body, err := util.GetHTTPBody(context.Background(), nil, chartFileURL)
+	body, err := util.FetchURL(context.Background(), nil, chartFileURL)
 	if err != nil {
 		return "", "", err
 	}
@@ -152,7 +152,7 @@ type chartImagesResolver struct {
 }
 
 func (cir *chartImagesResolver) fetchChartValues(valuesURL string) error {
-	body, err := util.GetHTTPBody(context.Background(), nil, valuesURL)
+	body, err := util.FetchURL(context.Background(), nil, valuesURL)
 	if err != nil {
 		return err
 	}

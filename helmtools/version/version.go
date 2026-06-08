@@ -22,15 +22,15 @@ func TagMatchesExpected(actual, expected string) bool {
 	return a == e || strings.HasPrefix(a, e+"-")
 }
 
-// CheckTagsInValues inspects a parsed values.yaml map for a given subchart and appVersion,
+// VerifyTagsInValues inspects a parsed values.yaml map for a given subchart and appVersion,
 // returning any keys whose value does not match the rule's expected tag.
 // Actual values may carry an appCo build-revision suffix (e.g. "v2.10.0-1") and are still
 // considered matching.
-func CheckTagsInValues(rules []values.SubchartRule, appVersion string, valuesMap map[string]interface{}) []TagMismatch {
+func VerifyTagsInValues(rules []values.SubchartRule, appVersion string, valuesMap map[string]interface{}) []TagMismatch {
 	var mismatches []TagMismatch
 	for _, rule := range rules {
 		expected := rule.Apply(appVersion)
-		actual, found := values.NavigatePath(valuesMap, rule.ValuesKey)
+		actual, found := values.GetByPath(valuesMap, rule.ValuesKey)
 		if !found {
 			mismatches = append(mismatches, TagMismatch{
 				ValuesKey:     rule.ValuesKey,

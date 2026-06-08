@@ -163,7 +163,7 @@ func getDockerHubToken(repo string) string {
 
 	// Construct full URL with encoded query parameters
 	fullURL := fmt.Sprintf("%s?%s", dockerTokenURL, params.Encode())
-	body, err := util.GetHTTPBody(context.Background(), nil, fullURL)
+	body, err := util.FetchURL(context.Background(), nil, fullURL)
 	if err != nil {
 		log.Fatal(err)
 	}

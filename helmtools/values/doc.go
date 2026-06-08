@@ -2,13 +2,13 @@
 //
 // # Basic Usage
 //
-// Navigate to a value by dotted path:
+// Get a value by dotted path:
 //
-//	value, found := values.NavigatePath(data, "image.tag")
+//	value, found := values.GetByPath(data, "image.tag")
 //
-// Navigate to a nested map:
+// Get a nested map by path:
 //
-//	imageMap, found := values.NavigateMap(data, "kubeRBACProxy.image")
+//	imageMap, found := values.GetMapByPath(data, "kubeRBACProxy.image")
 //
 // Work with subchart rules for version management:
 //
