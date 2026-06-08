@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 )
 
+// Set is a generic set implementation backed by a map.
+// Set is NOT safe for concurrent use. If multiple goroutines access a Set
+// concurrently, and at least one of them modifies the set, access must be
+// synchronized externally (e.g., using sync.Mutex).
 type Set[T comparable] map[T]struct{}
 
 func NewSet[T comparable]() Set[T] {

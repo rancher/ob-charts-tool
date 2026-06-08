@@ -22,4 +22,10 @@
 // Extract images from values.yaml:
 //
 //	images, err := image.ExtractImages(valuesData, "v1.0.0")
+//
+// # Thread Safety
+//
+// All package-level functions are safe for concurrent use.
+// The chart.Client type is safe for concurrent use.
+// The util.Set type requires external synchronization for concurrent access.
 package helmtools

@@ -388,6 +388,7 @@ func main() {
 	yaml.Unmarshal(valuesYAML, &valuesData)
 
 	// 3. Get rules for this subchart
+	// TODO Fix this example
 	subchartName := values.NormalizeName("rancher-kube-state-metrics")
 	rules := values.GetRules(subchartName, customRules, defaultRules)
 

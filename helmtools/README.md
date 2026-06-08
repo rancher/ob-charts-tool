@@ -130,9 +130,9 @@ chart, err := client.FetchChartYAML(ctx, url)
 
 ## Thread Safety
 
-- All package-level functions are safe for concurrent use
-- Client instances (`chart.Client`, `git.Client`) are safe for concurrent use
-- `util.Set[T]` requires external synchronization for concurrent writes
+- **All package-level functions** are safe for concurrent use
+- **`chart.Client`** is safe for concurrent use by multiple goroutines
+- **`util.Set[T]`** is NOT safe for concurrent use - requires external synchronization (e.g., `sync.Mutex`) if accessed by multiple goroutines
 
 ## Documentation
 

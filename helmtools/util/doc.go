@@ -6,6 +6,8 @@
 //
 //	body, err := util.FetchURL(ctx, httpClient, url)
 //
+// FetchURL is safe for concurrent use.
+//
 // # Set Operations
 //
 // Create and use a set:
@@ -16,6 +18,8 @@
 //	if set.Contains("item1") {
 //		// ...
 //	}
+//
+// IMPORTANT: Set is NOT safe for concurrent use without external synchronization.
 //
 // # Slice Utilities
 //

@@ -9,6 +9,7 @@ import (
 )
 
 // Client provides methods for fetching and parsing Helm charts with a configured HTTP client.
+// Client is safe for concurrent use by multiple goroutines.
 type Client struct {
 	httpClient *http.Client
 }
