@@ -1,4 +1,5 @@
-// Package chart provides utilities for parsing and fetching Helm Chart.yaml files.
+// Package chart provides utilities for parsing and fetching Helm Chart.yaml files
+// and Helm repository index.yaml files.
 //
 // # Basic Usage
 //
@@ -20,4 +21,10 @@
 // Find chart dependencies:
 //
 //	deps := chart.FindDependencies(myChart)
+//
+// Parse Helm repository index.yaml:
+//
+//	index, err := chart.ParseIndex(data)
+//	latest := index.GetLatestVersion("nginx")
+//	charts := index.ListCharts()
 package chart

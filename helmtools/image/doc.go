@@ -14,6 +14,19 @@
 //
 //	images := image.ExtractImagesFromTemplates(renderedChart)
 //
+// Extract images with source tracking:
+//
+//	refs, err := image.ExtractImagesWithSources(valuesData, "chart-name:1.0.0", "")
+//	for _, ref := range refs {
+//	    fmt.Printf("%s from %v\n", ref.FullImage(), ref.Sources)
+//	}
+//
+// Merge images from multiple charts:
+//
+//	refs1, _ := image.ExtractImagesWithSources(data1, "chart-a:1.0.0", "")
+//	refs2, _ := image.ExtractImagesWithSources(data2, "chart-b:2.0.0", "")
+//	merged := image.MergeImageSources(refs1, refs2)
+//
 // The extraction uses heuristic pattern matching to find keys ending in "image"
 // and decodes their structure (repository, tag, etc.).
 package image
