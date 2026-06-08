@@ -38,8 +38,3 @@ func GetRules(name string, ruleMap map[string][]SubchartRule, defaults []Subchar
 	}
 	return defaults
 }
-
-// NormalizeName strips the "rancher-" prefix from a subchart directory name.
-func NormalizeName(name string) string {
-	return strings.TrimPrefix(name, "rancher-")
-}

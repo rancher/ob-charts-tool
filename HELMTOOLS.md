@@ -565,9 +565,6 @@ func NavigateMap(data map[string]interface{}, keyPath string) (map[string]interf
 
 // GetRules returns applicable rules for a subchart
 func GetRules(name string, ruleMap map[string][]SubchartRule, defaults []SubchartRule) []SubchartRule
-
-// NormalizeName strips "rancher-" prefix
-func NormalizeName(name string) string
 ```
 
 ### helmtools/version

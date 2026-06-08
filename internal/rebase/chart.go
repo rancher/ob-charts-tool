@@ -12,6 +12,7 @@ import (
 	"github.com/rancher/ob-charts-tool/helmtools/values"
 	"github.com/rancher/ob-charts-tool/internal/config"
 	"github.com/rancher/ob-charts-tool/internal/upstream"
+	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
@@ -218,7 +219,7 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 func (s *ChartRebaseInfo) PopulateSubchartTagExpectations() {
 	s.SubchartTagExpectations = nil
 	for _, dep := range s.DependencyChartVersions {
-		normalized := values.NormalizeName(dep.Name)
+		normalized := internalvalues.NormalizeName(dep.Name)
 		if !config.SubchartsToCheck[normalized] || dep.AppVersion == "" {
 			continue
 		}

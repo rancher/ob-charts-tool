@@ -15,6 +15,7 @@ import (
 	"github.com/rancher/ob-charts-tool/helmtools/version"
 	"github.com/rancher/ob-charts-tool/internal/config"
 	gitpkg "github.com/rancher/ob-charts-tool/internal/git"
+	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
 	"gopkg.in/yaml.v3"
 )
 
@@ -718,7 +719,7 @@ func CheckSubchartAppVersionTags(repoPath string, pkg PackageInfo) CheckResult {
 			continue
 		}
 		dirName := entry.Name()
-		normalizedName := values.NormalizeName(dirName)
+		normalizedName := internalvalues.NormalizeName(dirName)
 		if !config.SubchartsToCheck[normalizedName] {
 			continue
 		}
