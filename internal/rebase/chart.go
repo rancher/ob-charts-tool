@@ -14,7 +14,6 @@ import (
 	"github.com/rancher/ob-charts-tool/internal/upstream"
 	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
 
-	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -25,7 +24,7 @@ func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 		return nil
 	}
 
-	chartChartURL := upstream.BuildChartYAMLURL(chartDep.Name, "TODO-hash")
+	chartChartURL := upstream.BuildChartYAMLURL(chartDep.Name, tag.CommitHash)
 	chartVersion, appVersion, err := findChartVersionInfo(chartChartURL)
 	if err != nil {
 		log.Errorf("Failed to find chart version info for %s: %v", chartDep.Name, err)
@@ -34,15 +33,15 @@ func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 
 	return &DependencyChartVersion{
 		Name:         chartDep.Name,
-		Ref:          tag.Name().String(),
-		CommitHash:   tag.Hash().String(),
+		Ref:          tag.Name,
+		CommitHash:   tag.CommitHash,
 		ChartURL:     chartChartURL,
 		ChartVersion: chartVersion,
 		AppVersion:   appVersion,
 	}
 }
 
-func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
+func findNewestReleaseTag(chartDep ChartDep) (bool, *git.Tag) {
 	version := chartDep.Version
 	if strings.Contains(version, ".*") {
 		version = strings.ReplaceAll(version, ".*", "")
@@ -64,7 +63,7 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 		panic("No valid version tags found")
 	}
 
-	return found, &plumbing.Reference{} // TODO: Refactor this function
+	return found, highestTag
 }
 
 func findChartVersionInfo(chartFileURL string) (string, string, error) {
