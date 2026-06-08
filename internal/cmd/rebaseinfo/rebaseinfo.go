@@ -1,6 +1,7 @@
 package rebaseinfo
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -15,7 +16,7 @@ import (
 func VerifyTagExists(tag string) (string, string) {
 	// Construct the full tag name for kube-prometheus-stack
 	fullTag := fmt.Sprintf("kube-prometheus-stack-%s", tag)
-	exists, tagRef, hash, err := git.VerifyTagExists(string(upstream.RepositoryPrometheus), fullTag)
+	exists, tagRef, hash, err := git.VerifyTagExists(context.Background(), string(upstream.RepositoryPrometheus), fullTag)
 	if err != nil || !exists {
 		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", tag)
 		fmt.Println(

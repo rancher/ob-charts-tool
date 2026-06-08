@@ -53,7 +53,7 @@ func extractImagesFromNode(node *yaml.Node, defaultTag string, images *util.Set[
 				if img.Tag == "" && defaultTag != "" {
 					img.Tag = defaultTag
 				}
-				_ = images.Add(img)
+				images.Add(img)
 			}
 		}
 

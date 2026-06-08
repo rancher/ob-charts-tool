@@ -9,6 +9,7 @@ type Dependency struct {
 
 // Metadata contains basic chart metadata.
 type Metadata struct {
+	Name       string `yaml:"name"`
 	Version    string `yaml:"version"`
 	AppVersion string `yaml:"appVersion"`
 }

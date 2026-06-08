@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -13,8 +14,10 @@ import (
 
 // VerifyTagExists checks if a tag exists in a remote repository.
 // Returns (exists bool, ref string, hash string, error).
-func VerifyTagExists(repoURL string, tag string) (bool, string, string, error) {
+// The context parameter is currently unused but reserved for future use when go-git supports it.
+func VerifyTagExists(_ context.Context, repoURL string, tag string) (bool, string, string, error) {
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{repoURL}})
+	// TODO: Pass context to List when go-git v5 supports it
 	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
 		return false, "", "", fmt.Errorf("error listing remote refs: %w", err)
@@ -32,8 +35,10 @@ func VerifyTagExists(repoURL string, tag string) (bool, string, string, error) {
 
 // FindMatchingTags finds all tags in a remote repository that contain the given string.
 // Returns (found bool, matching tags, error).
-func FindMatchingTags(repoURL string, tagPartial string) (bool, []Tag, error) {
+// The context parameter is currently unused but reserved for future use when go-git supports it.
+func FindMatchingTags(_ context.Context, repoURL string, tagPartial string) (bool, []Tag, error) {
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{repoURL}})
+	// TODO: Pass context to List when go-git v5 supports it
 	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
 		return false, nil, fmt.Errorf("error listing remote refs: %w", err)

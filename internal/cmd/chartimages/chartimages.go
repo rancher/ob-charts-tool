@@ -1,6 +1,7 @@
 package chartimages
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,7 +38,7 @@ func PrepareChartImagesList(chart string) ImageLists {
 	imageList := re.FindAllString(chart, -1)
 	imagesSet := util.NewSet[string]()
 	for _, image := range imageList {
-		_ = imagesSet.Add(image)
+		imagesSet.Add(image)
 	}
 
 	log.Debug("Looking for images...with `docker.io` strings")
@@ -48,7 +49,7 @@ func PrepareChartImagesList(chart string) ImageLists {
 		return !strings.Contains(strings.ToLower(s), "registry:")
 	})
 	for _, image := range imageList {
-		_ = imagesSet.Add(image)
+		imagesSet.Add(image)
 	}
 
 	imagesSet = imagesSet.Map(func(s string) string {
@@ -70,20 +71,20 @@ func PrepareChartImagesList(chart string) ImageLists {
 	// TODO: maybe consider adding image tag check - if non use latest?
 	for item := range imagesSet.ValuesChan() {
 		if strings.Contains(item, "{{") {
-			_ = imageListRes.NeedsManualCheck.Add(item)
+			imageListRes.NeedsManualCheck.Add(item)
 			imagesSet.Remove(item)
 		}
 	}
 
 	for item := range imagesSet.ValuesChan() {
 		if strings.Contains(item, "rancher/") {
-			_ = imageListRes.RancherImages.Add(item)
+			imageListRes.RancherImages.Add(item)
 			imagesSet.Remove(item)
 		}
 	}
 
 	for item := range imagesSet.ValuesChan() {
-		_ = imageListRes.NonRancherImages.Add(item)
+		imageListRes.NonRancherImages.Add(item)
 		imagesSet.Remove(item)
 	}
 
@@ -162,7 +163,7 @@ func getDockerHubToken(repo string) string {
 
 	// Construct full URL with encoded query parameters
 	fullURL := fmt.Sprintf("%s?%s", dockerTokenURL, params.Encode())
-	body, err := util.GetHTTPBody(fullURL)
+	body, err := util.GetHTTPBody(context.Background(), nil, fullURL)
 	if err != nil {
 		log.Fatal(err)
 	}

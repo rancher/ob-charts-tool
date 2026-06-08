@@ -17,7 +17,7 @@ func ExtractImagesFromTemplates(renderedChart string) util.Set[string] {
 	re := regexp.MustCompile(`image: (.*)`)
 	imageList := re.FindAllString(renderedChart, -1)
 	for _, image := range imageList {
-		_ = imagesSet.Add(image)
+		imagesSet.Add(image)
 	}
 
 	// Find "docker.io" patterns, excluding registry: lines
@@ -27,7 +27,7 @@ func ExtractImagesFromTemplates(renderedChart string) util.Set[string] {
 		return !strings.Contains(strings.ToLower(s), "registry:")
 	})
 	for _, image := range imageList {
-		_ = imagesSet.Add(image)
+		imagesSet.Add(image)
 	}
 
 	// Clean up image strings

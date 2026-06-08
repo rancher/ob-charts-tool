@@ -17,15 +17,6 @@ func ParseChartYAML(data []byte) (*Chart, error) {
 	return &chart, nil
 }
 
-// FetchChartYAML fetches Chart.yaml from a URL and parses it.
-func FetchChartYAML(url string) (*Chart, error) {
-	body, err := util.GetHTTPBody(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch Chart.yaml from %s: %w", url, err)
-	}
-	return ParseChartYAML(body)
-}
-
 // FindDependencies extracts the dependencies from a chart, filtering out "crds".
 // Returns an empty slice if the chart has no dependencies.
 func FindDependencies(chart *Chart) []Dependency {

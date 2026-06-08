@@ -28,17 +28,16 @@ func TestNewSet(t *testing.T) {
 func TestSet_Add(t *testing.T) {
 	t.Run("add string to set", func(t *testing.T) {
 		s := NewSet[string]()
-		err := s.Add("hello")
-		assert.NoError(t, err)
+		s.Add("hello")
 		assert.True(t, s.Contains("hello"))
 		assert.Equal(t, 1, s.Size())
 	})
 
 	t.Run("add multiple unique items", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
-		require.NoError(t, s.Add(2))
-		require.NoError(t, s.Add(3))
+		s.Add(1)
+		s.Add(2)
+		s.Add(3)
 		assert.Equal(t, 3, s.Size())
 		assert.True(t, s.Contains(1))
 		assert.True(t, s.Contains(2))
@@ -47,33 +46,32 @@ func TestSet_Add(t *testing.T) {
 
 	t.Run("add duplicate items - set behavior", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("duplicate"))
-		require.NoError(t, s.Add("duplicate"))
-		require.NoError(t, s.Add("duplicate"))
+		s.Add("duplicate")
+		s.Add("duplicate")
+		s.Add("duplicate")
 		assert.Equal(t, 1, s.Size(), "set should only contain one instance")
 		assert.True(t, s.Contains("duplicate"))
 	})
 
-	t.Run("cannot add empty string", func(t *testing.T) {
+	t.Run("can add empty string", func(t *testing.T) {
 		s := NewSet[string]()
-		err := s.Add("")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot add empty value")
-		assert.Equal(t, 0, s.Size())
+		s.Add("")
+		assert.True(t, s.Contains(""))
+		assert.Equal(t, 1, s.Size())
 	})
 
-	t.Run("cannot add zero value int", func(t *testing.T) {
+	t.Run("can add zero value int", func(t *testing.T) {
 		s := NewSet[int]()
-		err := s.Add(0)
-		assert.Error(t, err)
-		assert.Equal(t, 0, s.Size())
+		s.Add(0)
+		assert.True(t, s.Contains(0))
+		assert.Equal(t, 1, s.Size())
 	})
 
 	t.Run("can add non-zero values", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
-		require.NoError(t, s.Add(-1))
-		require.NoError(t, s.Add(100))
+		s.Add(1)
+		s.Add(-1)
+		s.Add(100)
 		assert.Equal(t, 3, s.Size())
 	})
 }
@@ -81,13 +79,13 @@ func TestSet_Add(t *testing.T) {
 func TestSet_Contains(t *testing.T) {
 	t.Run("contains existing item", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("exists"))
+		s.Add("exists")
 		assert.True(t, s.Contains("exists"))
 	})
 
 	t.Run("does not contain missing item", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("exists"))
+		s.Add("exists")
 		assert.False(t, s.Contains("missing"))
 	})
 
@@ -101,7 +99,7 @@ func TestSet_Contains(t *testing.T) {
 func TestSet_Remove(t *testing.T) {
 	t.Run("remove existing item", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("remove-me"))
+		s.Add("remove-me")
 		assert.True(t, s.Contains("remove-me"))
 		s.Remove("remove-me")
 		assert.False(t, s.Contains("remove-me"))
@@ -110,7 +108,7 @@ func TestSet_Remove(t *testing.T) {
 
 	t.Run("remove non-existent item is safe", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("keep"))
+		s.Add("keep")
 		s.Remove("not-there")
 		assert.Equal(t, 1, s.Size())
 		assert.True(t, s.Contains("keep"))
@@ -124,9 +122,9 @@ func TestSet_Remove(t *testing.T) {
 
 	t.Run("remove multiple items", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
-		require.NoError(t, s.Add(2))
-		require.NoError(t, s.Add(3))
+		s.Add(1)
+		s.Add(2)
+		s.Add(3)
 		s.Remove(1)
 		s.Remove(3)
 		assert.Equal(t, 1, s.Size())
@@ -139,8 +137,8 @@ func TestSet_Remove(t *testing.T) {
 func TestSet_Map(t *testing.T) {
 	t.Run("map strings to uppercase", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("hello"))
-		require.NoError(t, s.Add("world"))
+		s.Add("hello")
+		s.Add("world")
 
 		result := s.Map(func(str string) string {
 			return str + "!"
@@ -156,9 +154,9 @@ func TestSet_Map(t *testing.T) {
 
 	t.Run("map integers multiply by 2", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
-		require.NoError(t, s.Add(2))
-		require.NoError(t, s.Add(3))
+		s.Add(1)
+		s.Add(2)
+		s.Add(3)
 
 		result := s.Map(func(n int) int { return n * 2 })
 
@@ -170,9 +168,9 @@ func TestSet_Map(t *testing.T) {
 
 	t.Run("map to same value creates single-element set", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
-		require.NoError(t, s.Add(2))
-		require.NoError(t, s.Add(3))
+		s.Add(1)
+		s.Add(2)
+		s.Add(3)
 
 		result := s.Map(func(_ int) int { return 42 })
 
@@ -191,9 +189,9 @@ func TestSet_Map(t *testing.T) {
 func TestSet_Values(t *testing.T) {
 	t.Run("values returns all items", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("apple"))
-		require.NoError(t, s.Add("banana"))
-		require.NoError(t, s.Add("cherry"))
+		s.Add("apple")
+		s.Add("banana")
+		s.Add("cherry")
 
 		values := s.Values()
 		assert.Len(t, values, 3)
@@ -210,7 +208,7 @@ func TestSet_Values(t *testing.T) {
 
 	t.Run("values are independent copy", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
+		s.Add(1)
 		values := s.Values()
 		values[0] = 999
 		// Original set unchanged
@@ -222,9 +220,9 @@ func TestSet_Values(t *testing.T) {
 func TestSet_ValuesChan(t *testing.T) {
 	t.Run("channel delivers all items", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
-		require.NoError(t, s.Add(2))
-		require.NoError(t, s.Add(3))
+		s.Add(1)
+		s.Add(2)
+		s.Add(3)
 
 		received := make([]int, 0)
 		for val := range s.ValuesChan() {
@@ -255,16 +253,16 @@ func TestSet_Size(t *testing.T) {
 	t.Run("size increases with adds", func(t *testing.T) {
 		s := NewSet[int]()
 		assert.Equal(t, 0, s.Size())
-		require.NoError(t, s.Add(1))
+		s.Add(1)
 		assert.Equal(t, 1, s.Size())
-		require.NoError(t, s.Add(2))
+		s.Add(2)
 		assert.Equal(t, 2, s.Size())
 	})
 
 	t.Run("size decreases with removes", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(1))
-		require.NoError(t, s.Add(2))
+		s.Add(1)
+		s.Add(2)
 		assert.Equal(t, 2, s.Size())
 		s.Remove(1)
 		assert.Equal(t, 1, s.Size())
@@ -274,9 +272,9 @@ func TestSet_Size(t *testing.T) {
 
 	t.Run("duplicate adds don't increase size", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("same"))
-		require.NoError(t, s.Add("same"))
-		require.NoError(t, s.Add("same"))
+		s.Add("same")
+		s.Add("same")
+		s.Add("same")
 		assert.Equal(t, 1, s.Size())
 	})
 }
@@ -289,66 +287,24 @@ func TestSet_IsEmpty(t *testing.T) {
 
 	t.Run("set with items is not empty", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("item"))
+		s.Add("item")
 		assert.False(t, s.IsEmpty())
 	})
 
 	t.Run("set becomes empty after removing all items", func(t *testing.T) {
 		s := NewSet[int]()
-		require.NoError(t, s.Add(42))
+		s.Add(42)
 		assert.False(t, s.IsEmpty())
 		s.Remove(42)
 		assert.True(t, s.IsEmpty())
 	})
 }
 
-func TestIsEmpty(t *testing.T) {
-	t.Run("empty string", func(t *testing.T) {
-		assert.True(t, IsEmpty(""))
-	})
-
-	t.Run("non-empty string", func(t *testing.T) {
-		assert.False(t, IsEmpty("hello"))
-	})
-
-	t.Run("zero int", func(t *testing.T) {
-		assert.True(t, IsEmpty(0))
-	})
-
-	t.Run("non-zero int", func(t *testing.T) {
-		assert.False(t, IsEmpty(42))
-		assert.False(t, IsEmpty(-1))
-	})
-
-	t.Run("empty struct", func(t *testing.T) {
-		type Empty struct{}
-		assert.True(t, IsEmpty(Empty{}))
-	})
-
-	t.Run("non-empty struct", func(t *testing.T) {
-		type Person struct {
-			Name string
-		}
-		assert.True(t, IsEmpty(Person{}))
-		assert.False(t, IsEmpty(Person{Name: "Alice"}))
-	})
-
-	t.Run("nil slice", func(t *testing.T) {
-		var s []int
-		assert.True(t, IsEmpty(s))
-	})
-
-	t.Run("empty slice", func(t *testing.T) {
-		s := []int{}
-		assert.False(t, IsEmpty(s), "empty slice is not zero value (nil)")
-	})
-}
-
 func TestSet_MarshalJSON(t *testing.T) {
 	t.Run("serialize set to JSON array", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("apple"))
-		require.NoError(t, s.Add("banana"))
+		s.Add("apple")
+		s.Add("banana")
 
 		data, err := json.Marshal(s)
 		require.NoError(t, err)
@@ -373,8 +329,8 @@ func TestSet_MarshalJSON(t *testing.T) {
 func TestSet_MarshalYAML(t *testing.T) {
 	t.Run("serialize set to YAML array", func(t *testing.T) {
 		s := NewSet[string]()
-		require.NoError(t, s.Add("one"))
-		require.NoError(t, s.Add("two"))
+		s.Add("one")
+		s.Add("two")
 
 		data, err := yaml.Marshal(s)
 		require.NoError(t, err)

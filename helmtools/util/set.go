@@ -2,8 +2,6 @@ package util
 
 import (
 	"encoding/json"
-	"fmt"
-	"reflect"
 )
 
 type Set[T comparable] map[T]struct{}
@@ -12,12 +10,8 @@ func NewSet[T comparable]() Set[T] {
 	return make(Set[T])
 }
 
-func (s Set[T]) Add(item T) error {
-	if IsEmpty(item) {
-		return fmt.Errorf("cannot add empty value into set")
-	}
+func (s Set[T]) Add(item T) {
 	s[item] = struct{}{}
-	return nil
 }
 
 func (s Set[T]) Contains(item T) bool {
@@ -32,7 +26,7 @@ func (s Set[T]) Remove(item T) {
 func (s Set[T]) Map(f func(T) T) Set[T] {
 	result := NewSet[T]()
 	for item := range s {
-		_ = result.Add(f(item))
+		result.Add(f(item))
 	}
 	return result
 }
@@ -62,10 +56,6 @@ func (s Set[T]) Size() int {
 
 func (s Set[T]) IsEmpty() bool {
 	return len(s) == 0
-}
-
-func IsEmpty[T any](val T) bool {
-	return reflect.DeepEqual(val, *new(T))
 }
 
 func (s Set[T]) MarshalJSON() ([]byte, error) {

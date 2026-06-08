@@ -1,6 +1,7 @@
 package rebase
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -49,7 +50,7 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 	repo := upstream.IdentifyRepository(chartDep.Name)
 	tag := fmt.Sprintf("%s-%s", chartDep.Name, version)
 
-	found, tags, err := git.FindMatchingTags(string(repo), tag)
+	found, tags, err := git.FindMatchingTags(context.Background(), string(repo), tag)
 	if err != nil {
 		panic(err)
 	}
@@ -66,7 +67,7 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
 }
 
 func findChartVersionInfo(chartFileURL string) (string, string, error) {
-	body, err := util.GetHTTPBody(chartFileURL)
+	body, err := util.GetHTTPBody(context.Background(), nil, chartFileURL)
 	if err != nil {
 		return "", "", err
 	}
@@ -150,7 +151,7 @@ type chartImagesResolver struct {
 }
 
 func (cir *chartImagesResolver) fetchChartValues(valuesURL string) error {
-	body, err := util.GetHTTPBody(valuesURL)
+	body, err := util.GetHTTPBody(context.Background(), nil, valuesURL)
 	if err != nil {
 		return err
 	}
@@ -202,7 +203,7 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 					img.Tag = cir.appVersion
 				}
 
-				_ = cir.chartImagesList.Add(img)
+				cir.chartImagesList.Add(img)
 			}
 		}
 
