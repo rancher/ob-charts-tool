@@ -15,7 +15,7 @@ func ExtractImages(valuesData []byte, defaultTag string) (util.Set[Image], error
 	var root yaml.Node
 	err := yaml.Unmarshal(valuesData, &root)
 	if err != nil {
-		return util.NewSet[Image](), fmt.Errorf("error parsing values yaml: %w", err)
+		return util.NewSet[Image](), fmt.Errorf("failed to parse values.yaml: %w", err)
 	}
 
 	images := util.NewSet[Image]()

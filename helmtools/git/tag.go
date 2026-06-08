@@ -26,7 +26,7 @@ func VerifyTagExists(_ context.Context, repoURL string, tag string) (bool, strin
 	// TODO: Pass context to List when go-git v5 supports it
 	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
-		return false, "", "", fmt.Errorf("error listing remote refs: %w", err)
+		return false, "", "", fmt.Errorf("failed to list remote refs: %w", err)
 	}
 
 	expectedTagRef := "refs/tags/" + tag
@@ -53,7 +53,7 @@ func FindMatchingTags(_ context.Context, repoURL string, tagPartial string) (boo
 	// TODO: Pass context to List when go-git v5 supports it
 	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
-		return false, nil, fmt.Errorf("error listing remote refs: %w", err)
+		return false, nil, fmt.Errorf("failed to list remote refs: %w", err)
 	}
 
 	matchingRefs := util.FilterSlice(refs, func(reference *plumbing.Reference) bool {
