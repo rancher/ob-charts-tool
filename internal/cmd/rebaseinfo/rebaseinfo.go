@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/rancher/ob-charts-tool/helmtools/git"
-	"github.com/rancher/ob-charts-tool/helmtools/upstream"
 	"github.com/rancher/ob-charts-tool/internal/rebase"
+	"github.com/rancher/ob-charts-tool/internal/upstream"
 
 	"github.com/jedib0t/go-pretty/text"
 	log "github.com/sirupsen/logrus"

@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/rancher/ob-charts-tool/helmtools/git"
-	"github.com/rancher/ob-charts-tool/helmtools/upstream"
 	"github.com/rancher/ob-charts-tool/helmtools/util"
 	"github.com/rancher/ob-charts-tool/helmtools/values"
 	"github.com/rancher/ob-charts-tool/internal/config"
+	"github.com/rancher/ob-charts-tool/internal/upstream"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
