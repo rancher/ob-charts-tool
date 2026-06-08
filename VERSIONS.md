@@ -17,15 +17,15 @@ Both follow [semver](https://semver.org/). helmtools is currently v0.x (pre-stab
 ### helmtools changes
 ```bash
 git tag helmtools/v0.1.0
-git push origin helmtools/v0.1.0
-git tag v2.0.0              # CLI release including new helmtools
-git push origin v2.0.0
+git push origin helmtools/v0.1.0    # Triggers CI: tests, linter, GitHub release
+git tag v2.0.0                       # CLI release including new helmtools
+git push origin v2.0.0               # Triggers GoReleaser: binaries
 ```
 
 ### CLI-only changes
 ```bash
 git tag v2.0.1              # helmtools version unchanged
-git push origin v2.0.1
+git push origin v2.0.1      # Triggers GoReleaser: binaries
 ```
 
 ## Development
@@ -45,6 +45,7 @@ go run . monitoring branch-verify-check
 ## Notes
 
 - `go.work` is gitignored (local dev only)
-- CLI releases trigger GitHub Actions → GoReleaser → binaries
-- helmtools releases are just Git tags for Go module consumers
+- **CLI releases** (`v*` tags): GitHub Actions → GoReleaser → binaries
+- **helmtools releases** (`helmtools/v*` tags): GitHub Actions → tests, linter, integration tests → GitHub release with changelog
 - External helmtools users get only library deps (no CLI bloat: cobra, viper, k8s.io)
+- Changelogs are filtered to relevant changes: helmtools releases only show `helmtools/` directory commits
