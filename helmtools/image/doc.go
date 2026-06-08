@@ -14,12 +14,26 @@
 //
 //	images := image.ExtractImagesFromTemplates(renderedChart)
 //
-// Extract images with source tracking:
+// Extract images with source tracking and OS detection:
 //
 //	refs, err := image.ExtractImagesWithSources(valuesData, "chart-name:1.0.0", "")
 //	for _, ref := range refs {
-//	    fmt.Printf("%s from %v\n", ref.FullImage(), ref.Sources)
+//	    fmt.Printf("%s (OS: %s) from %v\n", ref.FullImage(), ref.OS, ref.Sources)
 //	}
+//
+// OS detection supports both explicit os field and name-based detection:
+//
+//	# Explicit OS field (preferred)
+//	image:
+//	  repository: myapp
+//	  tag: v1.0.0
+//	  os: windows  # or "linux", or "windows,linux"
+//
+//	# Name-based detection (fallback)
+//	image:
+//	  repository: mcr.microsoft.com/windows/nanoserver
+//	  tag: ltsc2022
+//	  # OS auto-detected as "windows" from image name
 //
 // Merge images from multiple charts:
 //

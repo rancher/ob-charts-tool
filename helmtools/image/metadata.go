@@ -45,11 +45,14 @@ func extractImagesWithSource(node *yaml.Node, source string, defaultTag string, 
 
 		if keyNode.Kind == yaml.ScalarNode && strings.HasSuffix(strings.ToLower(keyNode.Value), "image") {
 			var img Image
-			if err := valueNode.Decode(&img); err == nil {
+			if err := valueNode.Decode(&img); err == nil && img.Repository != "" {
 				// Set default tag if empty
 				if img.Tag == "" && defaultTag != "" {
 					img.Tag = defaultTag
 				}
+
+				// Extract explicit OS field if present
+				osList := extractOSField(valueNode)
 
 				// Build full image string as key
 				fullImage := buildFullImage(img)
@@ -62,10 +65,29 @@ func extractImagesWithSource(node *yaml.Node, source string, defaultTag string, 
 					}
 				} else {
 					// Create new reference
+					var primaryOS string
+					var supportedOSList []string
+
+					if osList == nil {
+						// No OS field found - fall back to name-based detection
+						primaryOS = detectOSFromName(img)
+						supportedOSList = []string{primaryOS}
+					} else if len(osList) > 0 {
+						// OS field found with valid values - use them
+						primaryOS = osList[0]
+						supportedOSList = osList
+					} else {
+						// OS field found but all values invalid - use empty OSList
+						// This makes SupportsOS() return false for all OS queries
+						primaryOS = "unknown"
+						supportedOSList = []string{}
+					}
+
 					refs[fullImage] = &ImageReference{
 						Image:   img,
 						Sources: []string{source},
-						OS:      detectOS(img),
+						OS:      primaryOS,
+						OSList:  supportedOSList,
 					}
 				}
 			}
@@ -84,8 +106,42 @@ func buildFullImage(img Image) string {
 	return img.Repository + ":" + img.Tag
 }
 
-// detectOS detects the operating system based on image name patterns.
-func detectOS(img Image) string {
+// extractOSField extracts the OS field from an image YAML node.
+// Returns a list of all OS values (e.g., ["windows", "linux"] for "windows,linux").
+// Returns nil if not found or invalid.
+func extractOSField(node *yaml.Node) []string {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
+
+	// Look for "os" field in the mapping
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		valueNode := node.Content[i+1]
+
+		if keyNode.Kind == yaml.ScalarNode && strings.ToLower(keyNode.Value) == "os" {
+			if valueNode.Kind == yaml.ScalarNode {
+				osValue := strings.TrimSpace(valueNode.Value)
+				// Handle comma-separated values (e.g., "windows,linux")
+				osList := []string{} // Initialize as empty slice (not nil)
+				for _, os := range strings.Split(osValue, ",") {
+					os = strings.TrimSpace(strings.ToLower(os))
+					// Only include valid OS values
+					if os == "windows" || os == "linux" {
+						osList = append(osList, os)
+					}
+				}
+				return osList // Returns empty slice if no valid values found
+			}
+			return nil
+		}
+	}
+
+	return nil
+}
+
+// detectOSFromName detects the operating system based on image name patterns.
+func detectOSFromName(img Image) string {
 	fullImage := strings.ToLower(buildFullImage(img))
 	if strings.Contains(fullImage, "windows") ||
 		strings.Contains(fullImage, "nanoserver") ||
@@ -125,6 +181,7 @@ func MergeImageSources(maps ...map[string]*ImageReference) map[string]*ImageRefe
 					Image:   ref.Image,
 					Sources: append([]string{}, ref.Sources...), // Copy slice
 					OS:      ref.OS,
+					OSList:  append([]string{}, ref.OSList...), // Copy slice
 				}
 			}
 		}
