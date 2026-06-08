@@ -8,6 +8,7 @@ import (
 )
 
 // FetchURL fetches the body of an HTTP GET request.
+// Returns an error if the response status code is not in the 2xx range.
 // If client is nil, http.DefaultClient is used.
 // The context can be used for cancellation and timeouts.
 func FetchURL(ctx context.Context, client *http.Client, url string) ([]byte, error) {
@@ -28,6 +29,10 @@ func FetchURL(ctx context.Context, client *http.Client, url string) ([]byte, err
 		return nil, fmt.Errorf("failed to fetch URL %s: %w", url, err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("HTTP %d fetching %s", resp.StatusCode, url)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

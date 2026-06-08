@@ -201,17 +201,27 @@ func TestFetchURL_HTTPErrors(t *testing.T) {
 		{
 			name:        "404 not found",
 			statusCode:  http.StatusNotFound,
-			errContains: "",
+			errContains: "HTTP 404",
 		},
 		{
 			name:        "500 internal server error",
 			statusCode:  http.StatusInternalServerError,
-			errContains: "",
+			errContains: "HTTP 500",
 		},
 		{
 			name:        "403 forbidden",
 			statusCode:  http.StatusForbidden,
-			errContains: "",
+			errContains: "HTTP 403",
+		},
+		{
+			name:        "400 bad request",
+			statusCode:  http.StatusBadRequest,
+			errContains: "HTTP 400",
+		},
+		{
+			name:        "502 bad gateway",
+			statusCode:  http.StatusBadGateway,
+			errContains: "HTTP 502",
 		},
 	}
 
@@ -223,14 +233,12 @@ func TestFetchURL_HTTPErrors(t *testing.T) {
 			}))
 			defer server.Close()
 
-			// Note: FetchURL currently doesn't validate HTTP status codes,
-			// it just fetches the response body
-			got, err := util.FetchURL(context.Background(), nil, server.URL)
-			if err != nil {
-				t.Fatalf("FetchURL() unexpected error: %v", err)
+			_, err := util.FetchURL(context.Background(), nil, server.URL)
+			if err == nil {
+				t.Fatal("FetchURL() should return error for non-2xx status")
 			}
-			if string(got) != "error response" {
-				t.Errorf("FetchURL() = %q, want %q", string(got), "error response")
+			if !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("FetchURL() error = %v, should contain %q", err, tt.errContains)
 			}
 		})
 	}
