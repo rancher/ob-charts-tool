@@ -23,6 +23,8 @@ func ExtractImages(valuesData []byte, defaultTag string) (util.Set[Image], error
 	return images, nil
 }
 
+var imageKeyPattern = regexp.MustCompile(`(?i)^(.+)?image$`)
+
 // extractImagesFromNode recursively traverses a YAML node tree looking for image definitions.
 func extractImagesFromNode(node *yaml.Node, defaultTag string, images *util.Set[Image]) {
 	if node == nil {
@@ -39,8 +41,6 @@ func extractImagesFromNode(node *yaml.Node, defaultTag string, images *util.Set[
 	if node.Kind != yaml.MappingNode {
 		return
 	}
-
-	imageKeyPattern := regexp.MustCompile(`(?i)^(.+)?image$`)
 
 	for i := 0; i < len(node.Content); i += 2 {
 		keyNode := node.Content[i]

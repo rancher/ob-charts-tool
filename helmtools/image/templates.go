@@ -7,6 +7,11 @@ import (
 	"github.com/rancher/ob-charts-tool/helmtools/util"
 )
 
+var (
+	imagePattern    = regexp.MustCompile(`image: (.*)`)
+	dockerIOPattern = regexp.MustCompile(`(.*)docker.io(.*)`)
+)
+
 // ExtractImagesFromTemplates extracts image references from rendered Helm templates.
 // This uses regex pattern matching to find image: and docker.io references.
 // Returns a set of image strings (e.g., "rancher/image:tag").
@@ -14,15 +19,13 @@ func ExtractImagesFromTemplates(renderedChart string) util.Set[string] {
 	imagesSet := util.NewSet[string]()
 
 	// Find "image: ..." patterns
-	re := regexp.MustCompile(`image: (.*)`)
-	imageList := re.FindAllString(renderedChart, -1)
+	imageList := imagePattern.FindAllString(renderedChart, -1)
 	for _, image := range imageList {
 		imagesSet.Add(image)
 	}
 
 	// Find "docker.io" patterns, excluding registry: lines
-	re = regexp.MustCompile(`(.*)docker.io(.*)`)
-	imageList = re.FindAllString(renderedChart, -1)
+	imageList = dockerIOPattern.FindAllString(renderedChart, -1)
 	imageList = util.FilterSlice(imageList, func(s string) bool {
 		return !strings.Contains(strings.ToLower(s), "registry:")
 	})
