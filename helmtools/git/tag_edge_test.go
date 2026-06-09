@@ -221,13 +221,6 @@ func BenchmarkFindHighestVersionTag(b *testing.B) {
 	_ = git.FindHighestVersionTag(tags, "app")
 }
 
-	result := git.FindHighestVersionTag(tags, "app")
-	if result == nil {
-		t.Fatal("FindHighestVersionTag() returned nil with 1000 tags")
-	}
-	// Should return a valid result without hanging or excessive memory use
-}
-
 func TestTag_Structure(t *testing.T) {
 	// Test that Tag struct can be created and accessed
 	tag := git.Tag{
