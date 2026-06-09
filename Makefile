@@ -52,7 +52,7 @@ endif
 # ---- Local targets (use Docker) ----
 .PHONY: lint
 lint:
-	$(RUN) golangci-lint run
+	$(RUN) golangci-lint run ./... && golangci-lint run ./helmtools/...
 
 .PHONY: release
 release:
