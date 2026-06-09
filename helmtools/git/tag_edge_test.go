@@ -193,10 +193,12 @@ func TestFindHighestVersionTag_Stability(t *testing.T) {
 	}
 }
 
-func TestFindHighestVersionTag_Performance(t *testing.T) {
+func BenchmarkFindHighestVersionTag(b *testing.B) {
 	// Test with a large number of tags
-	tags := make([]git.Tag, 1000)
-	for i := 0; i < 1000; i++ {
+	interactions := b.N
+	b.Logf("b.N = %d", interactions)
+	tags := make([]git.Tag, interactions)
+	for i := range interactions {
 		// Create tags with various patterns
 		var name string
 		if i%10 == 0 {
@@ -215,6 +217,9 @@ func TestFindHighestVersionTag_Performance(t *testing.T) {
 			CommitHash: "hash" + string(rune('0'+i%10)),
 		}
 	}
+
+	_ = git.FindHighestVersionTag(tags, "app")
+}
 
 	result := git.FindHighestVersionTag(tags, "app")
 	if result == nil {
