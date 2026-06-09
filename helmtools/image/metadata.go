@@ -155,7 +155,7 @@ func extractOSField(node *yaml.Node) []string {
 				osValue := strings.TrimSpace(valueNode.Value)
 				// Handle comma-separated values (e.g., "windows,linux")
 				osList := []string{} // Initialize as empty slice (not nil)
-				for _, os := range strings.Split(osValue, ",") {
+				for os := range strings.SplitSeq(osValue, ",") {
 					os = strings.TrimSpace(strings.ToLower(os))
 					// Only include valid OS values
 					if os == "windows" || os == "linux" {
