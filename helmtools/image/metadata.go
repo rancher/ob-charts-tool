@@ -2,6 +2,7 @@ package image
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -93,7 +94,7 @@ func extractImagesWithSource(node *yaml.Node, source string, defaultTag string, 
 				// Add or update ImageReference
 				if ref, exists := refs[fullImage]; exists {
 					// Add source if not already present
-					if !contains(ref.Sources, source) {
+					if !slices.Contains(ref.Sources, source) {
 						ref.Sources = append(ref.Sources, source)
 					}
 				} else {
@@ -184,16 +185,6 @@ func detectOSFromName(img Image) string {
 	return "linux"
 }
 
-// contains checks if a string slice contains a value.
-func contains(slice []string, value string) bool {
-	for _, item := range slice {
-		if item == value {
-			return true
-		}
-	}
-	return false
-}
-
 // MergeImageSources merges multiple image reference maps into one.
 // Sources are deduplicated and aggregated per image.
 func MergeImageSources(maps ...map[string]*ImageReference) map[string]*ImageReference {
@@ -204,7 +195,7 @@ func MergeImageSources(maps ...map[string]*ImageReference) map[string]*ImageRefe
 			if existing, exists := result[key]; exists {
 				// Merge sources
 				for _, source := range ref.Sources {
-					if !contains(existing.Sources, source) {
+					if !slices.Contains(existing.Sources, source) {
 						existing.Sources = append(existing.Sources, source)
 					}
 				}
