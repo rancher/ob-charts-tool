@@ -34,7 +34,7 @@ func TestClient_FetchChartYAML_Validation(t *testing.T) {
 func TestFindDependencies_Validation(t *testing.T) {
 	t.Run("handles nil chart gracefully", func(t *testing.T) {
 		deps := chart.FindDependencies(nil)
-		assert.NotNil(t, deps)
+		assert.Nil(t, deps)
 		assert.Empty(t, deps)
 	})
 
@@ -43,7 +43,7 @@ func TestFindDependencies_Validation(t *testing.T) {
 			Dependencies: nil,
 		}
 		deps := chart.FindDependencies(c)
-		assert.NotNil(t, deps)
+		assert.Nil(t, deps)
 		assert.Empty(t, deps)
 	})
 }
