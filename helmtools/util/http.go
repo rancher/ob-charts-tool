@@ -4,19 +4,39 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"time"
 )
+
+func newDefaultClient() *http.Client {
+	return &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   10 * time.Second, // time to establish TCP connection
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second, // time to receive first response byte
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   10,
+			IdleConnTimeout:       90 * time.Second,
+		},
+	}
+}
 
 // FetchURL fetches the body of an HTTP GET request.
 // Returns an error if the response status code is not in the 2xx range.
-// If client is nil, http.DefaultClient is used.
+// If client is nil, a default client with reasonable timeouts is used.
 // The context can be used for cancellation and timeouts.
 func FetchURL(ctx context.Context, client *http.Client, url string) ([]byte, error) {
 	if url == "" {
 		return nil, fmt.Errorf("url cannot be empty")
 	}
 	if client == nil {
-		client = http.DefaultClient
+		client = newDefaultClient()
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

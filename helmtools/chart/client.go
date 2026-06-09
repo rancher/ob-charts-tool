@@ -15,12 +15,9 @@ type Client struct {
 }
 
 // NewClient creates a new chart Client with the given HTTP client.
-// If httpClient is nil, http.DefaultClient is used.
+// If httpClient is nil, HTTP operations will use a default client with reasonable timeouts.
 // The returned Client is safe for concurrent use.
 func NewClient(httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
 	return &Client{httpClient: httpClient}
 }
 
