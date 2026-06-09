@@ -2,6 +2,7 @@ package chart
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -25,7 +26,7 @@ func NewClient(httpClient *http.Client) *Client {
 // The context can be used for cancellation and timeouts.
 func (c *Client) FetchChartYAML(ctx context.Context, url string) (*Chart, error) {
 	if url == "" {
-		return nil, fmt.Errorf("url cannot be empty")
+		return nil, errors.New("url cannot be empty")
 	}
 	body, err := util.FetchURL(ctx, c.httpClient, url)
 	if err != nil {

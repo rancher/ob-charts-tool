@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -33,7 +34,7 @@ func newDefaultClient() *http.Client {
 // The context can be used for cancellation and timeouts.
 func FetchURL(ctx context.Context, client *http.Client, url string) ([]byte, error) {
 	if url == "" {
-		return nil, fmt.Errorf("url cannot be empty")
+		return nil, errors.New("url cannot be empty")
 	}
 	if client == nil {
 		client = newDefaultClient()

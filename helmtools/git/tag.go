@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -17,10 +18,10 @@ import (
 // The context can be used for cancellation and timeouts.
 func VerifyTagExists(ctx context.Context, repoURL string, tag string) (bool, string, string, error) {
 	if repoURL == "" {
-		return false, "", "", fmt.Errorf("repository URL cannot be empty")
+		return false, "", "", errors.New("repository URL cannot be empty")
 	}
 	if tag == "" {
-		return false, "", "", fmt.Errorf("tag cannot be empty")
+		return false, "", "", errors.New("tag cannot be empty")
 	}
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{repoURL}})
 	refs, err := remote.ListContext(ctx, &git.ListOptions{})
@@ -43,10 +44,10 @@ func VerifyTagExists(ctx context.Context, repoURL string, tag string) (bool, str
 // The context can be used for cancellation and timeouts.
 func FindMatchingTags(ctx context.Context, repoURL string, tagPartial string) (bool, []Tag, error) {
 	if repoURL == "" {
-		return false, nil, fmt.Errorf("repository URL cannot be empty")
+		return false, nil, errors.New("repository URL cannot be empty")
 	}
 	if tagPartial == "" {
-		return false, nil, fmt.Errorf("tag pattern cannot be empty")
+		return false, nil, errors.New("tag pattern cannot be empty")
 	}
 	remote := git.NewRemote(nil, &config.RemoteConfig{URLs: []string{repoURL}})
 	refs, err := remote.ListContext(ctx, &git.ListOptions{})

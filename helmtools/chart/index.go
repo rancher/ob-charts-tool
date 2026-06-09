@@ -1,6 +1,7 @@
 package chart
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -45,7 +46,7 @@ type Maintainer struct {
 // ParseIndex parses a Helm repository index.yaml file.
 func ParseIndex(data []byte) (*Index, error) {
 	if len(data) == 0 {
-		return nil, fmt.Errorf("index data cannot be empty")
+		return nil, errors.New("index data cannot be empty")
 	}
 
 	var index Index
