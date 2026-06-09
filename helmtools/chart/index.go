@@ -72,7 +72,7 @@ func (idx *Index) LatestVersion(chartName string) *IndexEntry {
 func (idx *Index) ChartVersions(chartName string) []IndexEntry {
 	entries, exists := idx.Entries[chartName]
 	if !exists {
-		return []IndexEntry{}
+		return nil
 	}
 	return entries
 }
