@@ -206,7 +206,7 @@ func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
 		check.Message = fmt.Sprintf("Multiple package versions modified: %v (recommend modifying only one)", names)
 	} else {
 		check.Passed = true
-		check.Message = fmt.Sprintf("Single package version modified: %s", packages[0].FullPath)
+		check.Message = "Single package version modified: " + packages[0].FullPath
 	}
 
 	return packages, check
@@ -371,7 +371,7 @@ func CheckSequentialVersion(repoPath string, pkg PackageInfo) CheckResult {
 	currentVer, err := semver.NewVersion(info.Version)
 	if err != nil {
 		check.Passed = false
-		check.Message = fmt.Sprintf("Invalid version format: %s", info.Version)
+		check.Message = "Invalid version format: " + info.Version
 		return check
 	}
 
@@ -483,7 +483,7 @@ func CheckBuildNoChanges(repoPath string, pkg PackageInfo) CheckResult {
 	// Run make charts with PACKAGE env var
 	cmd := exec.Command("make", "charts")
 	cmd.Dir = repoPath
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PACKAGE=%s", pkg.Name))
+	cmd.Env = append(os.Environ(), "PACKAGE="+pkg.Name)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

@@ -1,6 +1,7 @@
 package branchverifycheck
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-git/go-git/v5"
@@ -62,7 +63,7 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	result.AddGlobalCheck(gitRepoCheck)
 	if !gitRepoCheck.Passed {
 		progress.Println("FAILED")
-		return result, fmt.Errorf("path is not a git repository")
+		return result, errors.New("path is not a git repository")
 	}
 	progress.Println("OK")
 

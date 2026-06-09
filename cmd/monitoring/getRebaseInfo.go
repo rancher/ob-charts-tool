@@ -1,6 +1,7 @@
 package monitoring
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -24,7 +25,7 @@ var getRebaseInfoCmd = &cobra.Command{
 			return nil
 		}
 
-		return fmt.Errorf("you must provide the target upstream chart version")
+		return errors.New("you must provide the target upstream chart version")
 	},
 	Run: getRebaseInfoHandler,
 }
@@ -58,7 +59,7 @@ func getRebaseInfoHandler(_ *cobra.Command, args []string) {
 
 	rebaseInfoState.PopulateSubchartTagExpectations()
 	savedRebaseInfoFilePath := rebaseInfoState.SaveStateToRebaseYaml(cwd)
-	fmt.Println(fmt.Sprintf("The rebase information is saved at: %s", savedRebaseInfoFilePath))
+	fmt.Println("The rebase information is saved at: " + savedRebaseInfoFilePath)
 
 	printSubchartChecklist(rebaseInfoState)
 }

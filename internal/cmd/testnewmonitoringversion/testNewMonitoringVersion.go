@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v3"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -73,7 +74,7 @@ func GetPreviousVersion(currentVersion, rancherURL, sessionToken, clusterRepo st
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Cookie", fmt.Sprintf("R_SESS=%s", sessionToken))
+	req.Header.Set("Cookie", "R_SESS="+sessionToken)
 	req.Header.Set("User-Agent", "ob-charts-tool")
 
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
@@ -102,7 +103,7 @@ func GetPreviousVersion(currentVersion, rancherURL, sessionToken, clusterRepo st
 
 	chartEntries, ok := index.Entries["rancher-monitoring"]
 	if !ok {
-		return "", fmt.Errorf("chart 'rancher-monitoring' not found in helm index")
+		return "", errors.New("chart 'rancher-monitoring' not found in helm index")
 	}
 
 	var versions []*semver.Version
@@ -178,7 +179,7 @@ func InstallCurrentVersion(chartVersion, rancherURL, sessionToken, clusterRepo s
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", fmt.Sprintf("R_SESS=%s", sessionToken))
+	req.Header.Set("Cookie", "R_SESS="+sessionToken)
 	req.Header.Set("User-Agent", "ob-charts-tool")
 
 	tr := &http.Transport{
@@ -220,7 +221,7 @@ func UninstallChart(chartName, namespace, rancherURL, sessionToken string) error
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Cookie", fmt.Sprintf("R_SESS=%s", sessionToken))
+	req.Header.Set("Cookie", "R_SESS="+sessionToken)
 	req.Header.Set("User-Agent", "ob-charts-tool")
 
 	tr := &http.Transport{
@@ -278,7 +279,7 @@ func waitForAppState(name, namespace string, desiredState AppState) error {
 		case <-ticker.C:
 			app, err := dynamicClient.Resource(appResource).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 			if err != nil {
-				if errors.IsNotFound(err) {
+				if k8serrors.IsNotFound(err) {
 					if desiredState == AppStateDeleted {
 						fmt.Printf("... app %s/%s has been deleted.\n", namespace, name)
 						return nil // Success for deletion

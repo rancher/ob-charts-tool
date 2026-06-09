@@ -13,6 +13,7 @@ linters:
     - unused
     - unparam
     - depguard
+    - perfsprint
   settings:
     depguard:
       rules:

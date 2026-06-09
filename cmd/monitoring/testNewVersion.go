@@ -1,6 +1,7 @@
 package monitoring
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -26,7 +27,7 @@ var testNewVersionCmd = &cobra.Command{
 		if len(args) == 1 {
 			return nil
 		}
-		return fmt.Errorf("you must provide the target upstream chart version")
+		return errors.New("you must provide the target upstream chart version")
 	},
 	RunE: testNewMonitoringVersion,
 }

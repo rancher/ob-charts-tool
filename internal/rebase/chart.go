@@ -240,10 +240,10 @@ func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) string {
 		log.Fatalf("Error marshaling YAML: %v", err)
 	}
 
-	err = os.WriteFile(fmt.Sprintf("%s/rebase.yaml", saveDir), yamlData, 0644)
+	err = os.WriteFile(saveDir+"/rebase.yaml", yamlData, 0644)
 	if err != nil {
 		log.Fatalf("Error writing YAML to file: %v", err)
 	}
 
-	return fmt.Sprintf("%s/rebase.yaml", saveDir)
+	return saveDir + "/rebase.yaml"
 }

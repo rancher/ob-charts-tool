@@ -190,7 +190,7 @@ func makeImageTagRequest(token string, url string) bool {
 	}
 
 	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Add("Authorization", "Bearer "+token)
 
 	// Create an HTTP client and send the request
 	client := &http.Client{}

@@ -58,7 +58,7 @@ func FindLocalRepoBranchAndRemote(dir string) (*RepoQAHintInfo, error) {
 		repoName := parts[1]
 		repoName = repoName[:len(repoName)-4]
 		// Transform the Git URL to an HTTP URL
-		remoteBranchURL = fmt.Sprintf("https://github.com/%s", repoName)
+		remoteBranchURL = "https://github.com/" + repoName
 	}
 
 	if remoteName == "origin" {
@@ -155,7 +155,7 @@ func FindRepoDefaultRemoteName(repo *git.Repository) (string, error) {
 
 	remoteName := branchRef.Remote
 	if remoteName == "" {
-		return "", fmt.Errorf("could not find remote branch from current HEAD")
+		return "", errors.New("could not find remote branch from current HEAD")
 	}
 
 	return remoteName, nil
