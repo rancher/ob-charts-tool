@@ -8,6 +8,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Image represents a container image with registry, repository, and tag.
+type Image struct {
+	Registry   string `yaml:"registry"`
+	Repository string `yaml:"repository"`
+	Tag        string `yaml:"tag"`
+}
+
 // ExtractImages recursively extracts all image definitions from a parsed values.yaml.
 // It uses pattern matching to find keys ending in "image" and decodes their values.
 // If an image has an empty tag and defaultTag is provided, it uses defaultTag.
