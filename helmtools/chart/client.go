@@ -16,10 +16,13 @@ type Client struct {
 }
 
 // NewClient creates a new chart Client with the given HTTP client.
-// If httpClient is nil, HTTP operations will use a default client with reasonable timeouts.
+// The httpClient parameter must not be nil.
 // The returned Client is safe for concurrent use.
-func NewClient(httpClient *http.Client) *Client {
-	return &Client{httpClient: httpClient}
+func NewClient(httpClient *http.Client) (*Client, error) {
+	if httpClient == nil {
+		return nil, errors.New("httpClient cannot be nil")
+	}
+	return &Client{httpClient: httpClient}, nil
 }
 
 // FetchChartYAML fetches Chart.yaml from a URL and parses it using the client's HTTP configuration.

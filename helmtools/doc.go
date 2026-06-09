@@ -12,7 +12,10 @@
 //
 // Fetch and parse a Chart.yaml:
 //
-//	client := chart.NewClient(nil) // uses http.DefaultClient
+//	client, err := chart.NewClient(&http.Client{})
+//	if err != nil {
+//		return err
+//	}
 //	chart, err := client.FetchChartYAML(ctx, "https://example.com/Chart.yaml")
 //
 // Find Git tags for a chart:

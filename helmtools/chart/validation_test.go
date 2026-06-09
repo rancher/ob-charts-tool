@@ -2,6 +2,7 @@ package chart_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/rancher/ob-charts-tool/helmtools/chart"
@@ -24,10 +25,17 @@ func TestParseChartYAML_Validation(t *testing.T) {
 
 func TestClient_FetchChartYAML_Validation(t *testing.T) {
 	t.Run("rejects empty URL", func(t *testing.T) {
-		client := chart.NewClient(nil)
-		_, err := client.FetchChartYAML(context.Background(), "")
+		client, err := chart.NewClient(&http.Client{})
+		assert.NoError(t, err)
+		_, err = client.FetchChartYAML(context.Background(), "")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "cannot be empty")
+	})
+
+	t.Run("rejects nil client", func(t *testing.T) {
+		_, err := chart.NewClient(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be nil")
 	})
 }
 

@@ -9,14 +9,12 @@
 //
 // Fetch and parse a Chart.yaml from a URL:
 //
-//	client := chart.NewClient(nil)
-//	chart, err := client.FetchChartYAML(ctx, "https://example.com/Chart.yaml")
-//
-// With custom HTTP client:
-//
 //	httpClient := &http.Client{Timeout: 30 * time.Second}
-//	client := chart.NewClient(httpClient)
-//	chart, err := client.FetchChartYAML(ctx, url)
+//	client, err := chart.NewClient(httpClient)
+//	if err != nil {
+//		return err
+//	}
+//	chart, err := client.FetchChartYAML(ctx, "https://example.com/Chart.yaml")
 //
 // Find chart dependencies:
 //

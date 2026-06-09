@@ -22,8 +22,10 @@ appVersion: 1.0.0
 	}))
 	defer server.Close()
 
-	// Test with nil client (uses default)
-	client := chart.NewClient(nil)
+	client, err := chart.NewClient(&http.Client{})
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
 	chartData, err := client.FetchChartYAML(context.Background(), server.URL)
 	if err != nil {
 		t.Fatalf("FetchChartYAML failed: %v", err)
@@ -59,8 +61,11 @@ version: 1.0.0
 		},
 	}
 
-	client := chart.NewClient(customClient)
-	_, err := client.FetchChartYAML(context.Background(), server.URL)
+	client, err := chart.NewClient(customClient)
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
+	_, err = client.FetchChartYAML(context.Background(), server.URL)
 	if err != nil {
 		t.Fatalf("FetchChartYAML with custom client failed: %v", err)
 	}
