@@ -112,7 +112,7 @@ entries:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			latest := index.GetLatestVersion(tt.chartName)
+			latest := index.LatestVersion(tt.chartName)
 			if tt.wantNil {
 				assert.Nil(t, latest)
 			} else {
@@ -167,7 +167,7 @@ entries:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			versions := index.GetChartVersions(tt.chartName)
+			versions := index.ChartVersions(tt.chartName)
 			assert.Len(t, versions, tt.wantCount)
 		})
 	}
@@ -243,7 +243,7 @@ entries:
 	index, err := chart.ParseIndex([]byte(indexYAML))
 	require.NoError(t, err)
 
-	entry := index.GetLatestVersion("nginx")
+	entry := index.LatestVersion("nginx")
 	require.NotNil(t, entry)
 
 	assert.Equal(t, "nginx", entry.Name)
