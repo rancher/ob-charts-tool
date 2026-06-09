@@ -7,6 +7,26 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Dependency represents a Helm chart dependency.
+type Dependency struct {
+	Name       string `yaml:"name"`
+	Version    string `yaml:"version"`
+	Repository string `yaml:"repository"`
+}
+
+// Metadata contains basic chart metadata.
+type Metadata struct {
+	Name       string `yaml:"name"`
+	Version    string `yaml:"version"`
+	AppVersion string `yaml:"appVersion"`
+}
+
+// Chart represents a Helm Chart.yaml structure.
+type Chart struct {
+	Metadata     `yaml:",inline"`
+	Dependencies []Dependency `yaml:"dependencies"`
+}
+
 // ParseChartYAML parses Chart.yaml bytes into a Chart struct.
 func ParseChartYAML(data []byte) (*Chart, error) {
 	if len(data) == 0 {
