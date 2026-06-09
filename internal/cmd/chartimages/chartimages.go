@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/rancher/ob-charts-tool/helmtools/util"
+	"github.com/rancher/ob-charts-tool/internal"
 
 	"github.com/jedib0t/go-pretty/list"
 	log "github.com/sirupsen/logrus"
@@ -163,7 +164,7 @@ func getDockerHubToken(repo string) string {
 
 	// Construct full URL with encoded query parameters
 	fullURL := fmt.Sprintf("%s?%s", dockerTokenURL, params.Encode())
-	body, err := util.FetchURL(context.Background(), nil, fullURL)
+	body, err := util.FetchURL(context.Background(), internal.DefaultHTTPClient, fullURL)
 	if err != nil {
 		log.Fatal(err)
 	}

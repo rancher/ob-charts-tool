@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/rancher/ob-charts-tool/helmtools/util"
+	"github.com/rancher/ob-charts-tool/internal"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -34,7 +35,7 @@ func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) Sta
 
 func (s *StartRequest) FetchChart() error {
 	s.FoundChart.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.FoundChart.CommitHash)
-	body, err := util.FetchURL(context.Background(), nil, s.FoundChart.ChartFileURL)
+	body, err := util.FetchURL(context.Background(), internal.DefaultHTTPClient, s.FoundChart.ChartFileURL)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/rancher/ob-charts-tool/helmtools/git"
 	"github.com/rancher/ob-charts-tool/helmtools/util"
 	"github.com/rancher/ob-charts-tool/helmtools/values"
+	"github.com/rancher/ob-charts-tool/internal"
 	"github.com/rancher/ob-charts-tool/internal/config"
 	"github.com/rancher/ob-charts-tool/internal/upstream"
 	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
@@ -67,7 +68,7 @@ func findNewestReleaseTag(chartDep ChartDep) (bool, *git.Tag) {
 }
 
 func findChartVersionInfo(chartFileURL string) (string, string, error) {
-	body, err := util.FetchURL(context.Background(), nil, chartFileURL)
+	body, err := util.FetchURL(context.Background(), internal.DefaultHTTPClient, chartFileURL)
 	if err != nil {
 		return "", "", err
 	}
@@ -151,7 +152,7 @@ type chartImagesResolver struct {
 }
 
 func (cir *chartImagesResolver) fetchChartValues(valuesURL string) error {
-	body, err := util.FetchURL(context.Background(), nil, valuesURL)
+	body, err := util.FetchURL(context.Background(), internal.DefaultHTTPClient, valuesURL)
 	if err != nil {
 		return err
 	}
