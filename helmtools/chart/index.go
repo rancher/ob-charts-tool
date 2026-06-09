@@ -58,8 +58,6 @@ func ParseIndex(data []byte) (*Index, error) {
 }
 
 // LatestVersion returns the latest version of a chart from the index.
-// Returns nil if the chart is not found or has no versions.
-// The index entries are assumed to be sorted with the latest first.
 func (idx *Index) LatestVersion(chartName string) *IndexEntry {
 	entries, exists := idx.Entries[chartName]
 	if !exists || len(entries) == 0 {
@@ -69,7 +67,6 @@ func (idx *Index) LatestVersion(chartName string) *IndexEntry {
 }
 
 // ChartVersions returns all versions of a chart from the index.
-// Returns an empty slice if the chart is not found.
 func (idx *Index) ChartVersions(chartName string) []IndexEntry {
 	entries, exists := idx.Entries[chartName]
 	if !exists {

@@ -21,7 +21,6 @@ type Tag struct {
 }
 
 // VerifyTagExists checks if a tag exists in a remote repository.
-// Returns (exists bool, ref string, hash string, error).
 // The context can be used for cancellation and timeouts.
 func VerifyTagExists(ctx context.Context, repoURL string, tag string) (bool, string, string, error) {
 	if repoURL == "" {
@@ -47,7 +46,6 @@ func VerifyTagExists(ctx context.Context, repoURL string, tag string) (bool, str
 }
 
 // FindMatchingTags finds all tags in a remote repository that contain the given string.
-// Returns (found bool, matching tags, error).
 // The context can be used for cancellation and timeouts.
 func FindMatchingTags(ctx context.Context, repoURL string, tagPartial string) (bool, []Tag, error) {
 	if repoURL == "" {
@@ -85,7 +83,6 @@ func FindMatchingTags(ctx context.Context, repoURL string, tagPartial string) (b
 
 // FindHighestVersionTag selects the tag with the highest semantic version number
 // from the provided tags, filtering by the given prefix.
-// Returns nil if no valid version tags are found.
 func FindHighestVersionTag(tags []Tag, componentPrefix string) *Tag {
 	if len(tags) == 0 {
 		return nil

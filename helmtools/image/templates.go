@@ -14,7 +14,6 @@ var (
 
 // ExtractImagesFromTemplates extracts image references from rendered Helm templates.
 // This uses regex pattern matching to find image: and docker.io references.
-// Returns a set of image strings (e.g., "rancher/image:tag").
 func ExtractImagesFromTemplates(renderedChart string) util.Set[string] {
 	imagesSet := util.NewSet[string]()
 

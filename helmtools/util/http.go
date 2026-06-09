@@ -29,7 +29,6 @@ func newDefaultClient() *http.Client {
 }
 
 // FetchURL fetches the body of an HTTP GET request.
-// Returns an error if the response status code is not in the 2xx range.
 // If client is nil, a default client with reasonable timeouts is used.
 // The context can be used for cancellation and timeouts.
 func FetchURL(ctx context.Context, client *http.Client, url string) ([]byte, error) {

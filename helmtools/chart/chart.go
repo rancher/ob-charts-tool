@@ -42,7 +42,6 @@ func ParseChartYAML(data []byte) (*Chart, error) {
 }
 
 // FindDependencies extracts the dependencies from a chart, filtering out "crds".
-// Returns an empty slice if the chart has no dependencies.
 func FindDependencies(chart *Chart) []Dependency {
 	if chart == nil || len(chart.Dependencies) == 0 {
 		return []Dependency{}

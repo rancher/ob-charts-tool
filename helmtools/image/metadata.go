@@ -43,7 +43,6 @@ func (ref ImageReference) SupportsOS(os string) bool {
 
 // ExtractImagesWithSources extracts images from values.yaml and tracks their source.
 // The source parameter identifies where the values came from (e.g., "chart-name:1.0.0").
-// Returns a map of image string -> ImageReference with aggregated sources.
 func ExtractImagesWithSources(valuesData []byte, source string, defaultTag string) (map[string]*ImageReference, error) {
 	var root yaml.Node
 	err := yaml.Unmarshal(valuesData, &root)
@@ -141,8 +140,6 @@ func buildFullImage(img Image) string {
 }
 
 // extractOSField extracts the OS field from an image YAML node.
-// Returns a list of all OS values (e.g., ["windows", "linux"] for "windows,linux").
-// Returns nil if not found or invalid.
 func extractOSField(node *yaml.Node) []string {
 	if node == nil || node.Kind != yaml.MappingNode {
 		return nil
