@@ -21,6 +21,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup go workspace
+        run: go work init . ./helmtools
+
       - name: Run helmtools tests
         run: |
           cd helmtools
