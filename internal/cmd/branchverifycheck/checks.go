@@ -11,8 +11,11 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
+	"github.com/rancher/ob-charts-tool/helmtools/values"
+	"github.com/rancher/ob-charts-tool/helmtools/version"
+	"github.com/rancher/ob-charts-tool/internal/config"
 	gitpkg "github.com/rancher/ob-charts-tool/internal/git"
-	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
+	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
 	"gopkg.in/yaml.v3"
 )
 
@@ -203,7 +206,7 @@ func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
 		check.Message = fmt.Sprintf("Multiple package versions modified: %v (recommend modifying only one)", names)
 	} else {
 		check.Passed = true
-		check.Message = fmt.Sprintf("Single package version modified: %s", packages[0].FullPath)
+		check.Message = "Single package version modified: " + packages[0].FullPath
 	}
 
 	return packages, check
@@ -368,7 +371,7 @@ func CheckSequentialVersion(repoPath string, pkg PackageInfo) CheckResult {
 	currentVer, err := semver.NewVersion(info.Version)
 	if err != nil {
 		check.Passed = false
-		check.Message = fmt.Sprintf("Invalid version format: %s", info.Version)
+		check.Message = "Invalid version format: " + info.Version
 		return check
 	}
 
@@ -480,7 +483,7 @@ func CheckBuildNoChanges(repoPath string, pkg PackageInfo) CheckResult {
 	// Run make charts with PACKAGE env var
 	cmd := exec.Command("make", "charts")
 	cmd.Dir = repoPath
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PACKAGE=%s", pkg.Name))
+	cmd.Env = append(os.Environ(), "PACKAGE="+pkg.Name)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -716,8 +719,8 @@ func CheckSubchartAppVersionTags(repoPath string, pkg PackageInfo) CheckResult {
 			continue
 		}
 		dirName := entry.Name()
-		normalizedName := monsubcharts.NormalizeName(dirName)
-		if !monsubcharts.SubchartsToCheck[normalizedName] {
+		normalizedName := internalvalues.NormalizeName(dirName)
+		if !config.SubchartsToCheck[normalizedName] {
 			continue
 		}
 
@@ -745,7 +748,8 @@ func CheckSubchartAppVersionTags(repoPath string, pkg PackageInfo) CheckResult {
 			continue
 		}
 
-		for _, m := range monsubcharts.CheckTagsInValues(normalizedName, chartMeta.AppVersion, valuesData) {
+		rules := values.GetRules(normalizedName, config.SubchartRules, config.DefaultRules)
+		for _, m := range version.VerifyTagsInValues(rules, chartMeta.AppVersion, valuesData) {
 			mismatches = append(mismatches, SubchartTagMismatch{
 				SubchartName:  dirName,
 				ValuesKey:     m.ValuesKey,

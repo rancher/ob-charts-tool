@@ -1,9 +1,11 @@
 package rebaseinfo
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/rancher/ob-charts-tool/helmtools/git"
 	"github.com/rancher/ob-charts-tool/internal/rebase"
 	"github.com/rancher/ob-charts-tool/internal/upstream"
 
@@ -12,10 +14,10 @@ import (
 )
 
 func VerifyTagExists(tag string) (string, string) {
-	exists := false
-	var tagRef string
-	var hash string
-	if exists, tagRef, hash = upstream.PrometheusChartVersionExists(tag); !exists {
+	// Construct the full tag name for kube-prometheus-stack
+	fullTag := "kube-prometheus-stack-" + tag
+	exists, tagRef, hash, err := git.VerifyTagExists(context.Background(), string(upstream.RepositoryPrometheus), fullTag)
+	if err != nil || !exists {
 		errorText := fmt.Sprintf("Cannot find upstream chart version `%s`", tag)
 		fmt.Println(
 			text.AlignCenter.Apply(

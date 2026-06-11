@@ -8,8 +8,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/rancher/ob-charts-tool/helmtools/util"
 	gitpkg "github.com/rancher/ob-charts-tool/internal/git"
-	"github.com/rancher/ob-charts-tool/internal/util"
 	log "github.com/sirupsen/logrus"
 )
 

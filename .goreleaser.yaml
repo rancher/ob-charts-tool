@@ -1,8 +1,9 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
-
-# The lines below are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/need to use them.
+# GoReleaser configuration for ob-charts-tool CLI
+#
+# This builds binaries for the CLI tool only (triggered by v* tags).
+# helmtools/* tags are library releases and don't need binary builds.
+#
+# See VERSIONS.md for release process documentation.
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
 

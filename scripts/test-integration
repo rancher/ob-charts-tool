@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+cd $(dirname $0)/..
+
+echo "Running integration tests..."
+
+# Run integration tests (requires network access)
+echo "Testing helmtools/git integration tests..."
+go test -v -tags=integration ./helmtools/git/

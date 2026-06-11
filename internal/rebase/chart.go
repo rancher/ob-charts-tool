@@ -1,18 +1,20 @@
 package rebase
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
-	"github.com/rancher/ob-charts-tool/internal/git"
-	gitremote "github.com/rancher/ob-charts-tool/internal/git/remote"
-	monsubcharts "github.com/rancher/ob-charts-tool/internal/monitoring"
+	"github.com/rancher/ob-charts-tool/helmtools/git"
+	"github.com/rancher/ob-charts-tool/helmtools/util"
+	"github.com/rancher/ob-charts-tool/helmtools/values"
+	"github.com/rancher/ob-charts-tool/internal"
+	"github.com/rancher/ob-charts-tool/internal/config"
 	"github.com/rancher/ob-charts-tool/internal/upstream"
-	"github.com/rancher/ob-charts-tool/internal/util"
+	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
 
-	"github.com/go-git/go-git/v5/plumbing"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -23,50 +25,60 @@ func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
 		return nil
 	}
 
-	chartChartURL := upstream.GetChartsChartURL(chartDep.Name, tag.Hash().String())
-	chartVersion, appVersion := findChartVersionInfo(chartChartURL)
+	chartChartURL := upstream.BuildChartYAMLURL(chartDep.Name, tag.CommitHash)
+	chartVersion, appVersion, err := findChartVersionInfo(chartChartURL)
+	if err != nil {
+		log.Errorf("Failed to find chart version info for %s: %v", chartDep.Name, err)
+		return nil
+	}
 
 	return &DependencyChartVersion{
 		Name:         chartDep.Name,
-		Ref:          tag.Name().String(),
-		CommitHash:   tag.Hash().String(),
+		Ref:          tag.Name,
+		CommitHash:   tag.CommitHash,
 		ChartURL:     chartChartURL,
 		ChartVersion: chartVersion,
 		AppVersion:   appVersion,
 	}
 }
 
-func findNewestReleaseTag(chartDep ChartDep) (bool, *plumbing.Reference) {
+func findNewestReleaseTag(chartDep ChartDep) (bool, *git.Tag) {
 	version := chartDep.Version
 	if strings.Contains(version, ".*") {
 		version = strings.ReplaceAll(version, ".*", "")
 	}
 
-	repo := upstream.IdentifyChartUpstream(chartDep.Name)
+	repo := upstream.IdentifyRepository(chartDep.Name)
 	tag := fmt.Sprintf("%s-%s", chartDep.Name, version)
 
-	found, tags := gitremote.FindTagsMatching(repo, tag)
+	found, tags, err := git.FindMatchingTags(context.Background(), string(repo), tag)
+	if err != nil {
+		panic(err)
+	}
 	if !found {
 		panic("Could not find any tags for this chart")
 	}
 
 	highestTag := git.FindHighestVersionTag(tags, chartDep.Name)
+	if highestTag == nil {
+		panic("No valid version tags found")
+	}
 
 	return found, highestTag
 }
 
-func findChartVersionInfo(chartFileURL string) (string, string) {
-	body, err := util.GetHTTPBody(chartFileURL)
+func findChartVersionInfo(chartFileURL string) (string, string, error) {
+	body, err := util.FetchURL(context.Background(), internal.DefaultHTTPClient, chartFileURL)
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 
 	var chartMeta ChartMetaData
 	if err := yaml.Unmarshal(body, &chartMeta); err != nil {
-		panic(err)
+		return "", "", err
 	}
 
-	return chartMeta.Version, chartMeta.AppVersion
+	return chartMeta.Version, chartMeta.AppVersion, nil
 }
 
 func (s *ChartRebaseInfo) FindChartsContainers() error {
@@ -82,7 +94,7 @@ func (s *ChartRebaseInfo) FindChartsContainers() error {
 
 func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string) {
 	// TODO: Add output for debug and normal flows
-	valuesFileURL := upstream.GetChartValuesURL(chartName, commitHash)
+	valuesFileURL := upstream.BuildValuesYAMLURL(chartName, commitHash)
 	log.Debugf("Fetching '%s' values file from: %s", chartName, valuesFileURL)
 
 	chartImageSet := make(util.Set[ChartImage])
@@ -109,14 +121,18 @@ func (s *ChartRebaseInfo) lookupChartImages(chartName string, commitHash string)
 		imageResolver.appVersion = chartDep.AppVersion
 	}
 
-	imageResolver.fetchChartValues(valuesFileURL)
+	err := imageResolver.fetchChartValues(valuesFileURL)
+	if err != nil {
+		log.Errorf("Failed to fetch chart values from %s: %v", valuesFileURL, err)
+		return
+	}
 
 	// Use the heuristic sweep for all charts so that every image in values.yaml is
 	// captured in rebase.yaml, not just the subset that branchverifycheck happens to
 	// verify against appVersion.  Rule-based extraction is the right tool for
 	// branchverifycheck (targeted version assertions), but rebase info needs the full
 	// picture of all images that may need updating.
-	err := imageResolver.extractChartValuesImages()
+	err = imageResolver.extractChartValuesImages()
 	if err != nil {
 		log.Error(err)
 		log.Exit(1)
@@ -135,12 +151,13 @@ type chartImagesResolver struct {
 	chartImagesList  *util.Set[ChartImage]
 }
 
-func (cir *chartImagesResolver) fetchChartValues(valuesURL string) {
-	body, err := util.GetHTTPBody(valuesURL)
+func (cir *chartImagesResolver) fetchChartValues(valuesURL string) error {
+	body, err := util.FetchURL(context.Background(), internal.DefaultHTTPClient, valuesURL)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	cir.chartValuesData = body
+	return nil
 }
 
 func (cir *chartImagesResolver) extractChartValuesImages() error {
@@ -187,7 +204,7 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 					img.Tag = cir.appVersion
 				}
 
-				_ = cir.chartImagesList.Add(img)
+				cir.chartImagesList.Add(img)
 			}
 		}
 
@@ -202,8 +219,8 @@ func (cir *chartImagesResolver) extractChartImages(node *yaml.Node) {
 func (s *ChartRebaseInfo) PopulateSubchartTagExpectations() {
 	s.SubchartTagExpectations = nil
 	for _, dep := range s.DependencyChartVersions {
-		normalized := monsubcharts.NormalizeName(dep.Name)
-		if !monsubcharts.SubchartsToCheck[normalized] || dep.AppVersion == "" {
+		normalized := internalvalues.NormalizeName(dep.Name)
+		if !config.SubchartsToCheck[normalized] || dep.AppVersion == "" {
 			continue
 		}
 		expectation := SubchartTagExpectation{
@@ -211,7 +228,7 @@ func (s *ChartRebaseInfo) PopulateSubchartTagExpectations() {
 			AppVersion:   dep.AppVersion,
 			ExpectedTags: make(map[string]string),
 		}
-		for _, rule := range monsubcharts.GetRules(normalized) {
+		for _, rule := range values.GetRules(normalized, config.SubchartRules, config.DefaultRules) {
 			expectation.ExpectedTags[rule.ValuesKey] = rule.Apply(dep.AppVersion)
 		}
 		s.SubchartTagExpectations = append(s.SubchartTagExpectations, expectation)
@@ -224,10 +241,10 @@ func (s *ChartRebaseInfo) SaveStateToRebaseYaml(saveDir string) string {
 		log.Fatalf("Error marshaling YAML: %v", err)
 	}
 
-	err = os.WriteFile(fmt.Sprintf("%s/rebase.yaml", saveDir), yamlData, 0644)
+	err = os.WriteFile(saveDir+"/rebase.yaml", yamlData, 0644)
 	if err != nil {
 		log.Fatalf("Error writing YAML to file: %v", err)
 	}
 
-	return fmt.Sprintf("%s/rebase.yaml", saveDir)
+	return saveDir + "/rebase.yaml"
 }

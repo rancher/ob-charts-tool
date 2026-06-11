@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,7 +35,7 @@ of the necessary images used in the chart. And then verify those are mirrored by
 			return nil
 		}
 
-		return fmt.Errorf("you must provide either one argument or input from stdin")
+		return errors.New("you must provide either one argument or input from stdin")
 	},
 	Run: verifyChartImagesHandler,
 }
@@ -69,7 +70,7 @@ func verifyChartImagesHandler(_ *cobra.Command, args []string) {
 		)
 
 		var helmArgs string
-		if _, err := os.Stat(fmt.Sprintf("%s/debug.yaml", cwd)); !os.IsNotExist(err) {
+		if _, err := os.Stat(cwd + "/debug.yaml"); !os.IsNotExist(err) {
 			helmArgs = fmt.Sprintf("template --debug rancher-monitoring %s -f %s/debug.yaml -n cattle-monitoring-system", chartTargetRoot, cwd)
 		} else {
 			helmArgs = fmt.Sprintf("template --debug rancher-monitoring %s -n cattle-monitoring-system", chartTargetRoot)

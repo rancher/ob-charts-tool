@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"slices"
@@ -141,7 +141,7 @@ func getTemplateVars(clientset *kubernetes.Clientset, templatingList []interface
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == v1.NodeInternalIP {
 			// default port of node-exporter we use is 9796
-			vars.Instance = fmt.Sprintf("%s:9796", addr.Address)
+			vars.Instance = addr.Address + ":9796"
 			break
 		}
 	}
@@ -232,13 +232,13 @@ func TestDashboard(dashboard map[string]interface{}, rancherURL, sessionToken st
 
 			finalExpr := replacer.Replace(expr)
 
-			prometheusQueryURL := fmt.Sprintf("%s/k8s/clusters/local/api/v1/namespaces/cattle-monitoring-system/services/http:rancher-monitoring-prometheus:9090/proxy/api/v1/query", rancherURL)
+			prometheusQueryURL := rancherURL + "/k8s/clusters/local/api/v1/namespaces/cattle-monitoring-system/services/http:rancher-monitoring-prometheus:9090/proxy/api/v1/query"
 			currentTime := time.Now().Unix()
 			fullQueryURL := fmt.Sprintf("%s?query=%s&time=%d", prometheusQueryURL, url.QueryEscape(finalExpr), currentTime)
 
 			req, _ := http.NewRequest("GET", fullQueryURL, nil)
 			req.Header.Set("Accept", "application/json")
-			req.Header.Set("Cookie", fmt.Sprintf("R_SESS=%s", sessionToken))
+			req.Header.Set("Cookie", "R_SESS="+sessionToken)
 			req.Header.Set("User-Agent", "ob-charts-tool")
 
 			resp, err := client.Do(req)
@@ -247,7 +247,7 @@ func TestDashboard(dashboard map[string]interface{}, rancherURL, sessionToken st
 			}
 			defer resp.Body.Close()
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				currentPanelResults = append(currentPanelResults, QueryResult{
 					Expr:   expr,

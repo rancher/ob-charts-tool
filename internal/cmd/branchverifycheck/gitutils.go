@@ -1,6 +1,7 @@
 package branchverifycheck
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-git/go-git/v5"
@@ -115,7 +116,7 @@ func GetGitRefs(repo *git.Repository, repoPath string) (*GitRefs, error) {
 	}
 
 	if len(mergeBaseCommits) == 0 {
-		return nil, fmt.Errorf("no common ancestor found between branch and upstream/main")
+		return nil, errors.New("no common ancestor found between branch and upstream/main")
 	}
 
 	refs.MergeBaseCommit = mergeBaseCommits[0]

@@ -1,9 +1,11 @@
 package rebase
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/rancher/ob-charts-tool/internal/util"
+	"github.com/rancher/ob-charts-tool/helmtools/util"
+	"github.com/rancher/ob-charts-tool/internal"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -22,20 +24,23 @@ func PrepareRebaseRequestInfo(version string, tagRef string, gitHash string) Sta
 		},
 	}
 
-	rebaseRequest.FetchChart()
+	if err := rebaseRequest.FetchChart(); err != nil {
+		log.Fatalf("Failed to fetch chart: %v", err)
+	}
 	rebaseRequest.FindAppVersion()
 	rebaseRequest.FindChartDeps()
 
 	return rebaseRequest
 }
 
-func (s *StartRequest) FetchChart() {
+func (s *StartRequest) FetchChart() error {
 	s.FoundChart.ChartFileURL = fmt.Sprintf(upstreamChartURL, s.FoundChart.CommitHash)
-	body, err := util.GetHTTPBody(s.FoundChart.ChartFileURL)
+	body, err := util.FetchURL(context.Background(), internal.DefaultHTTPClient, s.FoundChart.ChartFileURL)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.targetChart = body
+	return nil
 }
 
 func (s *StartRequest) FindAppVersion() {

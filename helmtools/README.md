@@ -1,0 +1,199 @@
+# helmtools
+
+Go utilities for working with Helm charts, focused on upstream chart analysis and version management.
+
+## Features
+
+- **Chart Parsing**: Parse and fetch Helm Chart.yaml files from URLs or bytes
+- **Git Operations**: Query remote Git repositories for chart tags and versions without cloning
+- **Image Extraction**: Extract container images from Helm values.yaml files using pattern matching
+- **Upstream Repositories**: Work with Prometheus Community and Grafana chart repositories
+- **Values Navigation**: Navigate and manipulate Helm values.yaml structure with dotted paths
+- **Version Management**: Compare and validate semantic versions
+
+## Installation
+
+```bash
+go get github.com/rancher/ob-charts-tool/helmtools
+```
+
+## Quick Start
+
+### Fetch and parse a Chart.yaml
+
+```go
+import (
+    "context"
+    "github.com/rancher/ob-charts-tool/helmtools/chart"
+)
+
+// Create a client (uses http.DefaultClient)
+client := chart.NewClient(nil)
+
+// Fetch and parse Chart.yaml
+ctx := context.Background()
+chart, err := client.FetchChartYAML(ctx, "https://example.com/Chart.yaml")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Access chart metadata
+fmt.Println("Chart:", chart.Name, "Version:", chart.Version)
+
+// Find dependencies (excluding "crds")
+deps := chart.FindDependencies(chart)
+```
+
+### Query Git repositories for chart versions
+
+```go
+import (
+    "context"
+    "github.com/rancher/ob-charts-tool/helmtools/git"
+)
+
+// Verify a specific tag exists
+exists, ref, hash, err := git.VerifyTagExists(
+    context.Background(),
+    "https://github.com/prometheus-community/helm-charts",
+    "kube-prometheus-stack-65.8.1",
+)
+
+// Find all tags matching a pattern
+found, tags, err := git.FindMatchingTags(
+    context.Background(),
+    repoURL,
+    "kube-prometheus-stack-",
+)
+
+// Find the highest version
+highestTag := git.FindHighestVersionTag(tags, "kube-prometheus-stack")
+```
+
+### Extract images from values.yaml
+
+```go
+import "github.com/rancher/ob-charts-tool/helmtools/image"
+
+// Extract all images, using "v1.0.0" as default tag for images without tags
+images, err := image.ExtractImages(valuesData, "v1.0.0")
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, img := range images.Values() {
+    fmt.Printf("%s:%s\n", img.Repository, img.Tag)
+}
+```
+
+### Custom HTTP client configuration
+
+```go
+import (
+    "net/http"
+    "time"
+)
+
+// Configure custom HTTP client
+httpClient := &http.Client{
+    Timeout: 30 * time.Second,
+    Transport: &http.Transport{
+        // Custom TLS, proxy, etc.
+    },
+}
+
+// Use it with chart operations
+client := chart.NewClient(httpClient)
+chart, err := client.FetchChartYAML(ctx, url)
+```
+
+## Package Overview
+
+- **`chart`**: Parse and fetch Helm Chart.yaml files
+- **`git`**: Query Git repositories for Helm chart tags and versions
+- **`image`**: Extract container images from Helm values.yaml files
+- **`values`**: Navigate and manipulate Helm values.yaml structure
+- **`version`**: Version comparison utilities
+- **`util`**: Shared utilities (HTTP, sets, slices)
+
+## Context Support
+
+All I/O operations accept a `context.Context` for cancellation and timeouts:
+
+```go
+// With timeout
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+
+chart, err := client.FetchChartYAML(ctx, url)
+```
+
+## Thread Safety
+
+- **All package-level functions** are safe for concurrent use
+- **`chart.Client`** is safe for concurrent use by multiple goroutines
+- **`util.Set[T]`** is NOT safe for concurrent use - requires external synchronization (e.g., `sync.Mutex`) if accessed by multiple goroutines
+
+## Documentation
+
+Full API documentation is available on [pkg.go.dev](https://pkg.go.dev/github.com/rancher/ob-charts-tool/helmtools).
+
+## Testing
+
+### Unit Tests
+
+Run unit tests (no network required):
+
+```bash
+go test ./helmtools/...
+```
+
+With coverage:
+
+```bash
+go test -cover ./helmtools/...
+```
+
+### Integration Tests
+
+Integration tests make real network calls to public Git repositories. Run them separately:
+
+```bash
+go test -tags=integration ./helmtools/git/
+```
+
+Or use the make target:
+
+```bash
+make test-integration
+```
+
+**Note:** Integration tests are skipped in short mode (`go test -short`).
+
+### Race Detection
+
+Verify thread safety with the race detector:
+
+```bash
+go test -race ./helmtools/...
+```
+
+## Versioning
+
+This library follows [semantic versioning](https://semver.org/). Releases are tagged as `helmtools/vX.Y.Z`.
+
+To use a specific version:
+
+```bash
+go get github.com/rancher/ob-charts-tool/helmtools@v0.1.0
+```
+
+See the [main repository VERSIONS.md](../VERSIONS.md) for release process details.
+
+## Contributing
+
+This package is part of the [ob-charts-tool](https://github.com/rancher/ob-charts-tool) project. Contributions are welcome!
+
+## License
+
+See the main repository LICENSE file.

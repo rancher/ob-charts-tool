@@ -24,10 +24,11 @@ endif
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  ci          - Run the ci scripts"
-	@echo "  test        - Run the test script"
-	@echo "  lint        - Run golangci-lint"
-	@echo "  release     - Run goreleaser"
+	@echo "  ci               - Run the ci scripts"
+	@echo "  test             - Run unit tests"
+	@echo "  test-integration - Run integration tests (requires network)"
+	@echo "  lint             - Run golangci-lint"
+	@echo "  release          - Run goreleaser"
 
 TARGETS := $(shell ls scripts)
 
@@ -51,7 +52,7 @@ endif
 # ---- Local targets (use Docker) ----
 .PHONY: lint
 lint:
-	$(RUN) golangci-lint run
+	$(RUN) golangci-lint run ./... && golangci-lint run ./helmtools/...
 
 .PHONY: release
 release:

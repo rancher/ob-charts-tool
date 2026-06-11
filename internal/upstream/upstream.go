@@ -3,67 +3,52 @@ package upstream
 import (
 	"fmt"
 	"strings"
-
-	gitremote "github.com/rancher/ob-charts-tool/internal/git/remote"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
-	grafanaChartsURL    = "https://github.com/grafana-community/helm-charts.git"
 	grafanaRawURL       = "https://github.com/grafana-community/helm-charts/raw/%s/charts/%s/%s.yaml"
-	prometheusChartsURL = "https://github.com/prometheus-community/helm-charts.git"
 	promCommunityRawURL = "https://github.com/prometheus-community/helm-charts/raw/%s/charts/%s/%s.yaml"
-	versionTemplate     = "kube-prometheus-stack-%s"
 )
 
-func IdentifyChartUpstream(chartName string) string {
+// IdentifyRepository determines which upstream repository a chart belongs to.
+// Currently supports Grafana and Prometheus Community charts.
+func IdentifyRepository(chartName string) Repository {
 	if strings.Contains(chartName, "grafana") {
-		return grafanaChartsURL
+		return RepositoryGrafana
 	}
-
-	return prometheusChartsURL
+	return RepositoryPrometheus
 }
 
-func GetKubePrometheusVersionTag(versionNumber string) string {
-	return fmt.Sprintf(versionTemplate, versionNumber)
-}
-
-func PrometheusChartVersionExists(version string) (bool, string, string) {
-	return gitremote.VerifyTagExists(prometheusChartsURL, GetKubePrometheusVersionTag(version))
-}
-
-func GetChartValuesURL(chartName string, chartHash string) string {
-	url := ""
-	switch chartName {
-	case "grafana":
-		url = fmt.Sprintf(grafanaRawURL, chartHash, chartName, "values")
+// BuildChartYAMLURL builds the raw GitHub URL for a chart's Chart.yaml file.
+// Returns empty string if chartName or commitHash is empty.
+func BuildChartYAMLURL(chartName string, commitHash string) string {
+	if chartName == "" || commitHash == "" {
+		return ""
+	}
+	repo := IdentifyRepository(chartName)
+	switch repo {
+	case RepositoryGrafana:
+		return fmt.Sprintf(grafanaRawURL, commitHash, chartName, "Chart")
+	case RepositoryPrometheus:
+		return fmt.Sprintf(promCommunityRawURL, commitHash, chartName, "Chart")
 	default:
-		url = fmt.Sprintf(promCommunityRawURL, chartHash, chartName, "values")
+		return ""
 	}
-
-	if url != "" {
-		return url
-	}
-
-	log.Errorf("Cannot find values file URL for `%s`", chartName)
-	log.Exit(1)
-	return ""
 }
 
-func GetChartsChartURL(chartName string, chartHash string) string {
-	url := ""
-	switch chartName {
-	case "grafana":
-		url = fmt.Sprintf(grafanaRawURL, chartHash, chartName, "Chart")
+// BuildValuesYAMLURL builds the raw GitHub URL for a chart's values.yaml file.
+// Returns empty string if chartName or commitHash is empty.
+func BuildValuesYAMLURL(chartName string, commitHash string) string {
+	if chartName == "" || commitHash == "" {
+		return ""
+	}
+	repo := IdentifyRepository(chartName)
+	switch repo {
+	case RepositoryGrafana:
+		return fmt.Sprintf(grafanaRawURL, commitHash, chartName, "values")
+	case RepositoryPrometheus:
+		return fmt.Sprintf(promCommunityRawURL, commitHash, chartName, "values")
 	default:
-		url = fmt.Sprintf(promCommunityRawURL, chartHash, chartName, "Chart")
+		return ""
 	}
-
-	if url != "" {
-		return url
-	}
-
-	log.Errorf("Cannot find chart.yaml file URL for `%s`", chartName)
-	log.Exit(1)
-	return ""
 }
