@@ -140,14 +140,30 @@ type BranchInfo struct {
 	IsUpToDate    bool
 }
 
-// PackageInfo holds information about a modified package
+// PackageInfo holds information about a package
 type PackageInfo struct {
-	// FullPath is the full package path relative to the packages root - package name plus version (e.g., "rancher-monitoring/77.9")
+	// FullPath is the full package path relative to the packages root
+	// For versioned packages: "rancher-monitoring/77.9"
+	// For non-versioned packages: "rancher-monitoring"
 	FullPath string `json:"fullPath"`
 	// Name is just the package name (e.g., "rancher-monitoring")
 	Name string `json:"name"`
-	// VersionDir is the version directory (e.g., "77.9")
-	VersionDir string `json:"versionDir"`
+	// VersionDir is the version directory (e.g., "77.9"), or empty string if package has no version directory
+	VersionDir string `json:"versionDir,omitempty"`
+	// PackageYAMLPath is the absolute path to the package.yaml file
+	PackageYAMLPath string `json:"-"`
+	// rootDir is the package root directory (either packages/<name> or packages/<name>/<version>)
+	rootDir string
+}
+
+// HasVersionDir returns true if this package has a version directory
+func (p *PackageInfo) HasVersionDir() bool {
+	return p.VersionDir != ""
+}
+
+// RootDir returns the package root directory path
+func (p *PackageInfo) RootDir() string {
+	return p.rootDir
 }
 
 // BuildDiffDetails contains details about uncommitted changes after a build

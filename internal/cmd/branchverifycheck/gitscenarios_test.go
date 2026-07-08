@@ -207,7 +207,10 @@ func TestFindModifiedPackages(t *testing.T) {
 			refs := m.buildRefs(t, head, mergeBase, mergeBase,
 				"refs/heads/my-feature", "refs/remotes/upstream/main")
 
-			packages, result := FindModifiedPackages(refs)
+			// Build package index from the repo
+			packageIndexes := FindAllPackages(m.dir)
+
+			packages, result := FindModifiedPackages(packageIndexes, refs)
 
 			assert.Equal(t, tc.wantPassed, result.Passed, "FindModifiedPackages: %s", result.Message)
 			assert.Len(t, packages, tc.wantCount, "packages: %v", packages)
