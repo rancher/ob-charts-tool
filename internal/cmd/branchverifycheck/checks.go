@@ -130,7 +130,7 @@ func CheckBranchCurrent(refs *GitRefs, repo *git.Repository) (BranchInfo, CheckR
 
 // FindModifiedPackages finds which packages were modified in the branch.
 // Compares HEAD to the merge-base to find only changes made on this branch.
-func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
+func FindModifiedPackages(packageIndexes map[string]PackageInfo, refs *GitRefs) ([]PackageInfo, CheckResult) {
 	check := CheckResult{
 		Name:     "Modified Packages",
 		Critical: false, // Soft fail
@@ -157,9 +157,9 @@ func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
 		return nil, check
 	}
 
-	// Extract modified packages from the diff
-	// We want to detect changes at the version level (e.g., "rancher-monitoring/77.9")
-	packagesMap := make(map[string]bool)
+	// Track which packages have been modified using the package index as source of truth
+	modifiedPackages := make(map[string]PackageInfo)
+
 	for _, change := range changes {
 		path := change.To.Name
 		if change.To.Name == "" {
@@ -167,27 +167,32 @@ func FindModifiedPackages(refs *GitRefs) ([]PackageInfo, CheckResult) {
 		}
 
 		// Check if it's in packages/ directory
-		if strings.HasPrefix(path, "packages/") {
-			parts := strings.Split(path, "/")
-			if len(parts) >= 3 {
-				// parts[0] = "packages", parts[1] = package name, parts[2] = version
-				packageWithVersion := parts[1] + "/" + parts[2]
-				packagesMap[packageWithVersion] = true
+		if !strings.HasPrefix(path, "packages/") {
+			continue
+		}
+
+		// Check if this path belongs to any package in the index
+		for pkgName, pkg := range packageIndexes {
+			// Build the relative package path prefix to check against
+			var packagePrefix string
+			if pkg.HasVersionDir() {
+				packagePrefix = filepath.Join("packages", pkgName, pkg.VersionDir)
+			} else {
+				packagePrefix = filepath.Join("packages", pkgName)
+			}
+
+			// If the changed file is under this package's directory, mark it as modified
+			if strings.HasPrefix(path, packagePrefix+"/") || path == packagePrefix {
+				modifiedPackages[pkgName] = pkg
+				break // Found the package, no need to check others
 			}
 		}
 	}
 
-	// Convert to PackageInfo slice
+	// Convert to slice
 	var packages []PackageInfo
-	for fullPath := range packagesMap {
-		parts := strings.Split(fullPath, "/")
-		if len(parts) == 2 {
-			packages = append(packages, PackageInfo{
-				FullPath:   fullPath,
-				Name:       parts[0],
-				VersionDir: parts[1],
-			})
-		}
+	for _, pkg := range modifiedPackages {
+		packages = append(packages, pkg)
 	}
 
 	if len(packages) == 0 {
@@ -222,7 +227,19 @@ type PackageVersionInfo struct {
 
 // getPackageYAMLPath returns the path to package.yaml for a given package.
 // Handles package-specific directory structures.
+// If PackageYAMLPath is already set on pkg, returns it directly.
 func getPackageYAMLPath(repoPath string, pkg PackageInfo) string {
+	// If already set, use it
+	if pkg.PackageYAMLPath != "" {
+		return pkg.PackageYAMLPath
+	}
+
+	// Handle packages without version directory
+	if pkg.VersionDir == "" {
+		return filepath.Join(repoPath, "packages", pkg.Name, "package.yaml")
+	}
+
+	// rancher-monitoring and kube-prometheus-stack have a nested structure
 	if pkg.Name == "rancher-monitoring" || pkg.Name == "kube-prometheus-stack" {
 		// rancher-monitoring has a subdirectory with the package name
 		return filepath.Join(repoPath, "packages", pkg.Name, pkg.VersionDir, pkg.Name, "package.yaml")

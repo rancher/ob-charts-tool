@@ -109,8 +109,11 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 	globalCheck(progress, result, "Checking if branch is current with upstream... ", currentCheck, "OK", behindMsg)
 
 	// Step 6: Find modified packages
+	// First find package indexes to make finding modified packages easier
+	packageIndexes := FindAllPackages(path)
+
 	progress.Print("Finding modified packages... ")
-	packages, packagesCheck := FindModifiedPackages(refs)
+	packages, packagesCheck := FindModifiedPackages(packageIndexes, refs)
 	result.AddGlobalCheck(packagesCheck)
 	if len(packages) > 0 {
 		progress.Printf("OK (found: %v)\n", packageNames(packages))
