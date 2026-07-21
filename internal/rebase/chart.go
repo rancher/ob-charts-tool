@@ -16,7 +16,7 @@ import (
 	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func findNewestReleaseTagInfo(chartDep ChartDep) *DependencyChartVersion {
