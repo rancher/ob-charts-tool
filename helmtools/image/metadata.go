@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // ImageReference represents a container image with metadata about where it was found.

@@ -16,7 +16,7 @@ import (
 	"github.com/rancher/ob-charts-tool/internal/config"
 	gitpkg "github.com/rancher/ob-charts-tool/internal/git"
 	internalvalues "github.com/rancher/ob-charts-tool/internal/values"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // CheckIsGitRepo verifies the path is a valid git repository.

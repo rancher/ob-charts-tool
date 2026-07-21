@@ -5,7 +5,7 @@ import (
 	"regexp"
 
 	"github.com/rancher/ob-charts-tool/helmtools/util"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Image represents a container image with registry, repository, and tag.
