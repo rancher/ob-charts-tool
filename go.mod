@@ -6,7 +6,7 @@ replace (
 	github.com/rancher/ob-charts-tool/helmtools => ./helmtools
 	gopkg.in/yaml.v2 v2.2.2 => go.yaml.in/yaml/v2 v2.2.2
 	gopkg.in/yaml.v2 v2.4.0 => go.yaml.in/yaml/v2 v2.4.0
-	gopkg.in/yaml.v3 => go.yaml.in/yaml/v3 v3.0.1
+	gopkg.in/yaml.v3 => go.yaml.in/yaml/v3 v3.0.5
 )
 
 require (
@@ -19,7 +19,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.0
-	go.yaml.in/yaml/v3 v3.0.4
+	go.yaml.in/yaml/v3 v3.0.5
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
 	k8s.io/client-go v0.36.3
