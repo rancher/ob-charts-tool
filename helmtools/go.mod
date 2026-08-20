@@ -5,14 +5,14 @@ go 1.26.0
 replace (
 	gopkg.in/yaml.v2 v2.2.2 => go.yaml.in/yaml/v2 v2.2.2
 	gopkg.in/yaml.v2 v2.4.0 => go.yaml.in/yaml/v2 v2.4.0
-	gopkg.in/yaml.v3 => go.yaml.in/yaml/v3 v3.0.1
+	gopkg.in/yaml.v3 => go.yaml.in/yaml/v3 v3.0.5
 )
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/stretchr/testify v1.12.0
-	go.yaml.in/yaml/v3 v3.0.4
+	go.yaml.in/yaml/v3 v3.0.5
 )
 
 require (
