@@ -15,7 +15,7 @@ require (
 	github.com/go-git/go-git/v5 v5.19.2
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
 	github.com/rancher/ob-charts-tool/helmtools v0.0.0-00010101000000-000000000000
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.0
