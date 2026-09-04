@@ -11,6 +11,7 @@ func subCommandList() []*cobra.Command {
 	return []*cobra.Command{
 		getRebaseInfoCmd,
 		testNewVersionCmd,
+		checkSubchartImages,
 	}
 }
 

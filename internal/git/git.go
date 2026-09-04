@@ -16,6 +16,25 @@ func VerifyDirIsGitRepo(repoDir string) bool {
 	return err == nil
 }
 
+func IsRepoClean(repoPath string) bool {
+	gitRepo, err := git.PlainOpen(repoPath)
+	if err != nil {
+		return false
+	}
+
+	worktree, err := gitRepo.Worktree()
+	if err != nil {
+		return false
+	}
+
+	status, err := worktree.Status()
+	if err != nil {
+		return false
+	}
+
+	return status.IsClean()
+}
+
 type RepoQAHintInfo struct {
 	Path           string
 	CurrentBranch  string
