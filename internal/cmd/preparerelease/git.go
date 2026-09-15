@@ -11,7 +11,7 @@ import (
 // RancherMinorToChartsBranch converts a Rancher minor version to the corresponding charts branch name.
 // For example, "2.15" -> "dev-v2.15"
 func RancherMinorToChartsBranch(rancherMinor string) string {
-	return fmt.Sprintf("dev-v%s", rancherMinor)
+	return "dev-v" + rancherMinor
 }
 
 // EnsureGitBranch ensures the repository is on the specified branch from the remote.

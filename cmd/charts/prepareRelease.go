@@ -22,7 +22,7 @@ Prerequisites:
   - The automation directory must already be on a branch ready for changes.
   - All updates for the specified Rancher versions will be committed to that branch.
   - The charts directory will have branches checked out automatically (dev-v2.X).`,
-	Args: func(cmd *cobra.Command, args []string) error {
+	Args: func(_ *cobra.Command, _ []string) error {
 		return nil
 	},
 	Run: getPrepareReleaseHandler,
@@ -39,7 +39,7 @@ func init() {
 	prepareReleaseCmd.MarkFlagRequired("rancher-minor")
 }
 
-func getPrepareReleaseHandler(cmd *cobra.Command, args []string) {
+func getPrepareReleaseHandler(cmd *cobra.Command, _ []string) {
 	chartDir, err := cmd.Flags().GetString("chart-dir")
 	if err != nil {
 		log.Fatalf("Failed to get chart-dir flag: %v", err)

@@ -3,6 +3,7 @@ package preparerelease
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -71,7 +72,7 @@ func rancherChartsMajorVersion(rancherMinor string) string {
 	// 2.10 -> 105, 2.11 -> 106, etc.
 	chartMajor := 95 + minor
 
-	return fmt.Sprintf("%d", chartMajor)
+	return strconv.Itoa(chartMajor)
 }
 
 func ChartsMatchingRancherMinorFilter(minor string) func(string) bool {

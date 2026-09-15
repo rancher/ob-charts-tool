@@ -1,6 +1,7 @@
 package preparerelease
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -52,7 +53,7 @@ func SelectHighestVersions(charts map[string][]string) (map[string]string, error
 // findHighestVersion parses a list of version strings and returns the highest one.
 func findHighestVersion(versionList []string) (string, error) {
 	if len(versionList) == 0 {
-		return "", fmt.Errorf("version list is empty")
+		return "", errors.New("version list is empty")
 	}
 
 	versions := make([]*semver.Version, 0, len(versionList))
