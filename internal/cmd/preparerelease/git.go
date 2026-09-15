@@ -2,9 +2,9 @@ package preparerelease
 
 import (
 	"fmt"
-	"os/exec"
-	"strings"
 
+	"github.com/go-git/go-git/v5"
+	gitpkg "github.com/rancher/ob-charts-tool/internal/git"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,50 +15,40 @@ func RancherMinorToChartsBranch(rancherMinor string) string {
 }
 
 // EnsureGitBranch ensures the repository is on the specified branch from the remote.
-// It fetches from the remote and checks out the branch.
-func EnsureGitBranch(repoDir, remote, branch string) error {
-	log.Infof("Fetching latest from %s in %s", remote, repoDir)
-
-	// Fetch from remote
-	fetchCmd := exec.Command("git", "fetch", remote)
-	fetchCmd.Dir = repoDir
-	if output, err := fetchCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to fetch from %s: %w\n%s", remote, err, string(output))
-	}
-
-	// Check if branch exists on remote
-	remoteBranch := fmt.Sprintf("%s/%s", remote, branch)
-	lsRemoteCmd := exec.Command("git", "ls-remote", "--heads", remote, branch)
-	lsRemoteCmd.Dir = repoDir
-	output, err := lsRemoteCmd.CombinedOutput()
+// It fetches the latest state of the branch from the remote and checks it out.
+// Uses the internal/git package which handles SSH/HTTPS auth like native git.
+func EnsureGitBranch(repoDir, remoteName, branchName string) error {
+	log.Infof("Opening repository at %s", repoDir)
+	repo, err := git.PlainOpen(repoDir)
 	if err != nil {
-		return fmt.Errorf("failed to check if branch %s exists on %s: %w", branch, remote, err)
+		return fmt.Errorf("failed to open repository: %w", err)
 	}
 
-	if len(strings.TrimSpace(string(output))) == 0 {
-		return fmt.Errorf("branch %s does not exist on remote %s", branch, remote)
+	log.Infof("Fetching latest %s from %s", branchName, remoteName)
+	if err := gitpkg.FetchBranch(repo, remoteName, branchName); err != nil {
+		return err
 	}
 
-	log.Infof("Checking out %s", remoteBranch)
-
-	// Checkout the branch from remote
-	checkoutCmd := exec.Command("git", "checkout", "-B", branch, remoteBranch)
-	checkoutCmd.Dir = repoDir
-	if output, err := checkoutCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to checkout %s: %w\n%s", remoteBranch, err, string(output))
+	log.Infof("Checking out %s/%s", remoteName, branchName)
+	if err := gitpkg.CheckoutBranch(repo, remoteName, branchName, true); err != nil {
+		return err
 	}
 
-	log.Infof("Successfully checked out %s", remoteBranch)
+	log.Infof("Successfully checked out %s/%s", remoteName, branchName)
 	return nil
 }
 
 // GetCurrentBranch returns the current git branch name for the given repository.
 func GetCurrentBranch(repoDir string) (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	cmd.Dir = repoDir
-	output, err := cmd.CombinedOutput()
+	repo, err := git.PlainOpen(repoDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to get current branch: %w", err)
+		return "", fmt.Errorf("failed to open repository: %w", err)
 	}
-	return strings.TrimSpace(string(output)), nil
+
+	branchName, err := gitpkg.FindRepoBranchName(repo)
+	if err != nil {
+		return "", err
+	}
+
+	return branchName, nil
 }

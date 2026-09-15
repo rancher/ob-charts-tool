@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/rancher/ob-charts-tool/internal/git/auth"
 	log "github.com/rancher/ob-charts-tool/internal/logging"
 )
 
@@ -196,4 +198,94 @@ func GetRemoteURLs(repo *git.Repository) (map[string][]string, error) {
 		remoteURLs[remoteConfig.Name] = urls
 	}
 	return remoteURLs, nil
+}
+
+// FetchBranch fetches a specific branch from a remote using proper SSH/HTTPS auth.
+// It resolves authentication the same way native git does.
+func FetchBranch(repo *git.Repository, remoteName, branchName string) error {
+	// Get the remote
+	remote, err := repo.Remote(remoteName)
+	if err != nil {
+		return fmt.Errorf("failed to get remote %s: %w", remoteName, err)
+	}
+
+	if len(remote.Config().URLs) == 0 {
+		return fmt.Errorf("remote %s has no URLs configured", remoteName)
+	}
+	remoteURL := remote.Config().URLs[0]
+
+	// Resolve auth using the auth manager
+	authMgr := auth.New()
+	authMethod, err := authMgr.Resolve(remoteURL)
+	if err != nil {
+		return fmt.Errorf("failed to resolve auth for %s: %w", remoteURL, err)
+	}
+
+	// Fetch the specific branch
+	refSpec := config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%s", branchName, remoteName, branchName))
+	err = repo.Fetch(&git.FetchOptions{
+		RemoteName: remoteName,
+		RefSpecs:   []config.RefSpec{refSpec},
+		Auth:       authMethod,
+	})
+
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		return fmt.Errorf("failed to fetch %s from %s: %w", branchName, remoteName, err)
+	}
+
+	return nil
+}
+
+// CheckoutBranch checks out a branch, creating or resetting it to match a remote branch.
+// If the branch doesn't exist locally, it creates it. If it exists, it resets it to match the remote.
+func CheckoutBranch(repo *git.Repository, remoteName, branchName string, force bool) error {
+	// Get the remote branch reference
+	remoteBranchRef := plumbing.NewRemoteReferenceName(remoteName, branchName)
+	remoteRef, err := repo.Reference(remoteBranchRef, true)
+	if err != nil {
+		return fmt.Errorf("remote branch %s/%s not found: %w", remoteName, branchName, err)
+	}
+
+	// Get worktree
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	// Local branch reference
+	localBranchRef := plumbing.NewBranchReferenceName(branchName)
+
+	// Check if the local branch exists
+	_, err = repo.Reference(localBranchRef, false)
+	branchExists := err == nil
+
+	if branchExists {
+		// Branch exists, update it to point to the remote commit first
+		err = repo.Storer.SetReference(plumbing.NewHashReference(localBranchRef, remoteRef.Hash()))
+		if err != nil {
+			return fmt.Errorf("failed to update branch reference: %w", err)
+		}
+
+		// Then checkout the updated branch
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Branch: localBranchRef,
+			Force:  force,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to checkout existing branch: %w", err)
+		}
+	} else {
+		// Branch doesn't exist, create it
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Branch: localBranchRef,
+			Hash:   remoteRef.Hash(),
+			Force:  force,
+			Create: true,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create and checkout branch: %w", err)
+		}
+	}
+
+	return nil
 }
