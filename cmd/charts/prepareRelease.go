@@ -79,6 +79,11 @@ func getPrepareReleaseHandler(cmd *cobra.Command, _ []string) {
 	}
 	log.Infof("Automation directory is on branch: %s", currentBranch)
 	fmt.Println(text.Color.Sprintf(text.FgCyan, "All changes will be saved to automation branch: %s", currentBranch))
+
+	// Verify automation directory has no uncommitted changes
+	if err := preparerelease.VerifyCleanWorktree(automationDir); err != nil {
+		log.Fatalf("Automation directory has uncommitted changes: %v", err)
+	}
 	fmt.Println()
 
 	log.WithFields(log.Fields{

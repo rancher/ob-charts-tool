@@ -70,3 +70,28 @@ func GetCurrentBranch(repoDir string) (string, error) {
 
 	return branchName, nil
 }
+
+// VerifyCleanWorktree checks that the repository has no uncommitted changes.
+// This should be called before any operation that might overwrite files.
+func VerifyCleanWorktree(repoDir string) error {
+	repo, err := git.PlainOpen(repoDir)
+	if err != nil {
+		return fmt.Errorf("failed to open repository: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	status, err := worktree.Status()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree status: %w", err)
+	}
+
+	if !status.IsClean() {
+		return fmt.Errorf("worktree has uncommitted changes in %s - commit or stash them before running prepare-release", repoDir)
+	}
+
+	return nil
+}
