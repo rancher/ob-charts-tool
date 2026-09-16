@@ -134,7 +134,8 @@ func TestChartsMatchingRancherMinorFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			filter := ChartsMatchingRancherMinorFilter(tt.rancherMinor)
+			filter, err := ChartsMatchingRancherMinorFilter(tt.rancherMinor)
+			assert.NoError(t, err)
 			result := filter(tt.version)
 			assert.Equal(t, tt.shouldMatch, result)
 		})
@@ -196,7 +197,8 @@ func TestFilterChartsByRancherMinor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := FilterChartsByRancherMinor(tt.rancherMinor, tt.input)
+			result, err := FilterChartsByRancherMinor(tt.rancherMinor, tt.input)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -90,6 +90,7 @@ func getPrepareReleaseHandler(cmd *cobra.Command, _ []string) {
 	}).Debug("Configuration")
 
 	// Process each Rancher minor version
+	var failedMinors []string
 	for i, rancherMinor := range rancherMinors {
 		if i > 0 {
 			fmt.Println()
@@ -107,14 +108,32 @@ func getPrepareReleaseHandler(cmd *cobra.Command, _ []string) {
 
 		if err := processRancherMinor(chartDir, automationDir, rancherMinor, chartRemote); err != nil {
 			log.Errorf("Failed to process Rancher %s: %v", rancherMinor, err)
+			failedMinors = append(failedMinors, rancherMinor)
 			continue
 		}
 	}
 
 	fmt.Println()
+	successCount := len(rancherMinors) - len(failedMinors)
+	if len(failedMinors) > 0 {
+		fmt.Println(
+			text.AlignCenter.Apply(
+				text.Color.Sprintf(text.FgRed, "✗ Failed to process %d version(s): %v", len(failedMinors), failedMinors),
+				80,
+			),
+		)
+		fmt.Println(
+			text.AlignCenter.Apply(
+				text.Color.Sprintf(text.FgYellow, "✓ Successfully processed %d of %d version(s)", successCount, len(rancherMinors)),
+				80,
+			),
+		)
+		log.Fatalf("Command failed: %d version(s) could not be processed", len(failedMinors))
+	}
+
 	fmt.Println(
 		text.AlignCenter.Apply(
-			text.Color.Sprintf(text.FgGreen, "✓ Successfully processed %d Rancher version(s)", len(rancherMinors)),
+			text.Color.Sprintf(text.FgGreen, "✓ Successfully processed all %d Rancher version(s)", len(rancherMinors)),
 			80,
 		),
 	)
@@ -142,7 +161,11 @@ func processRancherMinor(chartDir, automationDir, rancherMinor, chartRemote stri
 
 	// Step 2: Filter by Rancher minor version
 	fmt.Println(text.Color.Sprintf(text.FgYellow, "→ Step 2: Filtering for Rancher %s...", rancherMinor))
-	orbsReleases = preparerelease.FilterChartsByRancherMinor(rancherMinor, orbsReleases)
+	var err error
+	orbsReleases, err = preparerelease.FilterChartsByRancherMinor(rancherMinor, orbsReleases)
+	if err != nil {
+		return fmt.Errorf("failed to filter charts for Rancher %s: %w", rancherMinor, err)
+	}
 	log.Infof("After filtering: %d charts match Rancher %s", len(orbsReleases), rancherMinor)
 
 	if len(orbsReleases) == 0 {

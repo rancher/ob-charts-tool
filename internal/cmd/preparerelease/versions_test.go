@@ -82,7 +82,7 @@ func TestFindHighestVersion(t *testing.T) {
 				"110.0.1+up7.0.1-rc.1",
 				"110.0.0+up7.0.0",
 			},
-			expected: "110.0.1+up7.0.1-rc.2",
+			expected: "110.0.1+up7.0.1",
 		},
 		{
 			name: "Mixed stable and prerelease",
@@ -91,7 +91,7 @@ func TestFindHighestVersion(t *testing.T) {
 				"110.0.1+up11.0.2",
 				"110.0.0+up11.0.0",
 			},
-			expected: "110.0.2+up11.0.3-rc.4",
+			expected: "110.0.2+up11.0.3",
 		},
 		{
 			name: "Single version",
@@ -101,12 +101,31 @@ func TestFindHighestVersion(t *testing.T) {
 			expected: "110.0.1+up7.0.1",
 		},
 		{
-			name: "With custom prerelease identifiers",
+			name: "Deduplication after prerelease stripping",
 			versions: []string{
 				"110.0.0-glorp.1+up4.10.0-rancher.24",
 				"110.0.0-glop.2+up4.10.0-rancher.24",
 			},
-			expected: "110.0.0-glorp.1+up4.10.0-rancher.24",
+			expected: "110.0.0+up4.10.0-rancher.24",
+		},
+		{
+			name: "Higher version wins with different prerelease",
+			versions: []string{
+				"110.0.2-glop.4+up4.10.0-rancher.24",
+				"110.0.0-glorp.1+up4.10.0-rancher.25",
+				"110.0.0-glop.2+up4.10.0-rancher.24",
+			},
+			expected: "110.0.2+up4.10.0-rancher.24",
+		},
+		{
+			name: "First occurrence when build metadata differs",
+			versions: []string{
+				"110.0.2-glop.4+up4.10.0-rancher.27",
+				"110.0.2-glop.4+up4.10.0-rancher.24",
+				"110.0.0-glorp.1+up4.10.0-rancher.25",
+				"110.0.0-glop.2+up4.10.0-rancher.24",
+			},
+			expected: "110.0.2+up4.10.0-rancher.27",
 		},
 		{
 			name:        "Empty list",

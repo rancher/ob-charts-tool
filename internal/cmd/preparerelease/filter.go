@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/rancher/ob-charts-tool/helmtools/util"
 )
 
 type ChartFilterItem struct {
@@ -75,19 +77,25 @@ func rancherChartsMajorVersion(rancherMinor string) string {
 	return strconv.Itoa(chartMajor)
 }
 
-func ChartsMatchingRancherMinorFilter(minor string) func(string) bool {
+func ChartsMatchingRancherMinorFilter(minor string) (func(string) bool, error) {
 	chartsVersionPrefix := rancherChartsMajorVersion(minor)
-	return func(chartVersion string) bool {
-		return strings.HasPrefix(chartVersion, chartsVersionPrefix)
+	if chartsVersionPrefix == "" {
+		return nil, fmt.Errorf("invalid rancher minor version: %s", minor)
 	}
+	// Require complete major component match (e.g., "105." not just "105")
+	// This prevents "105" from matching "1050.x.x"
+	return func(chartVersion string) bool {
+		return strings.HasPrefix(chartVersion, chartsVersionPrefix+".")
+	}, nil
 }
 
-func FilterChartsByRancherMinor(minor string, releases map[string][]string) map[string][]string {
-	chartMinorFilter := ChartsMatchingRancherMinorFilter(minor)
+func FilterChartsByRancherMinor(minor string, releases map[string][]string) (map[string][]string, error) {
+	chartMinorFilter, err := ChartsMatchingRancherMinorFilter(minor)
+	if err != nil {
+		return nil, err
+	}
 	for chart, versions := range releases {
-		filtered := slices.DeleteFunc(slices.Clone(versions), func(s string) bool {
-			return !chartMinorFilter(s)
-		})
+		filtered := util.FilterSlice(versions, chartMinorFilter)
 		if len(filtered) == 0 {
 			delete(releases, chart)
 		} else {
@@ -95,5 +103,5 @@ func FilterChartsByRancherMinor(minor string, releases map[string][]string) map[
 		}
 	}
 
-	return releases
+	return releases, nil
 }

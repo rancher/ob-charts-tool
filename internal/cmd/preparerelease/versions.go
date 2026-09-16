@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/rancher/ob-charts-tool/helmtools/util"
 )
 
 // prereleaseSuffixPattern matches prerelease identifiers like -rc.X, -beta.X, -alpha.X
@@ -51,17 +52,30 @@ func SelectHighestVersions(charts map[string][]string) (map[string]string, error
 }
 
 // findHighestVersion parses a list of version strings and returns the highest one.
+// To avoid semver treating build metadata (+upX.Y.Z) as identical, we strip
+// prerelease suffixes first, deduplicate, then sort. This ensures deterministic
+// selection when multiple versions differ only in build metadata.
 func findHighestVersion(versionList []string) (string, error) {
 	if len(versionList) == 0 {
 		return "", errors.New("version list is empty")
 	}
 
-	versions := make([]*semver.Version, 0, len(versionList))
-
+	// Strip prerelease suffixes from all versions first
+	cleanedVersions := make([]string, 0, len(versionList))
 	for _, versionStr := range versionList {
-		v, err := semver.NewVersion(versionStr)
+		cleaned := stripPrereleaseSuffix(versionStr)
+		cleanedVersions = append(cleanedVersions, cleaned)
+	}
+
+	// Deduplicate versions
+	uniqueVersions := util.Unique(cleanedVersions)
+
+	// Build version collection from deduplicated cleaned versions
+	versions := make([]*semver.Version, 0, len(uniqueVersions))
+	for _, cleaned := range uniqueVersions {
+		v, err := semver.NewVersion(cleaned)
 		if err != nil {
-			return "", fmt.Errorf("failed to parse version %s: %w", versionStr, err)
+			return "", fmt.Errorf("failed to parse version %s: %w", cleaned, err)
 		}
 		versions = append(versions, v)
 	}
