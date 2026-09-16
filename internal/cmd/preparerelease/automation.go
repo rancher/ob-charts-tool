@@ -110,12 +110,19 @@ func UpdateAutomationReleaseChart(chart AutomationReleaseChart, versionMap map[s
 		// Check if this is an ORBS chart and we have a new version for it
 		if filter(chartName) {
 			if newVersion, hasUpdate := versionMap[chartName]; hasUpdate {
-				// Add the new version with ToRelease: true
-				newVersions[newVersion] = ReleaseInfo{
-					ToRelease: true,
-					QA:        false,
-					UnRC:      false,
-					Released:  false,
+				// Check if this version already exists in the automation chart
+				if existingInfo, exists := versions[newVersion]; exists {
+					// Version already exists - preserve existing flags but ensure ToRelease is true
+					existingInfo.ToRelease = true
+					newVersions[newVersion] = existingInfo
+				} else {
+					// New version - initialize with ToRelease: true
+					newVersions[newVersion] = ReleaseInfo{
+						ToRelease: true,
+						QA:        false,
+						UnRC:      false,
+						Released:  false,
+					}
 				}
 			} else {
 				// ORBS chart but no update, copy existing versions
