@@ -49,11 +49,11 @@ func New() *Manager {
 // Resolve picks the right auth method for a remote URL, following the same
 // precedence native git uses for that protocol.
 func (m *Manager) Resolve(remoteURL string) (transport.AuthMethod, error) {
-	scheme, host, user, _ := parseRemote(remoteURL)
+	scheme, host, user, path := parseRemote(remoteURL)
 
 	switch scheme {
 	case "http", "https":
-		return m.resolveHTTPAuth(scheme, host)
+		return m.resolveHTTPAuth(scheme, host, user, path)
 	case "ssh", "":
 		return m.resolveSSHAuth(host, user)
 	default:
@@ -72,7 +72,11 @@ func parseRemote(remote string) (scheme, host, user, path string) {
 		if err != nil {
 			return "", "", "", ""
 		}
-		return u.Scheme, u.Hostname(), u.User.Username(), u.Path
+		user = ""
+		if u.User != nil {
+			user = u.User.Username()
+		}
+		return u.Scheme, u.Hostname(), user, u.Path
 	}
 	if strings.HasPrefix(remote, "ssh://") {
 		u, err := url.Parse(remote)
@@ -170,19 +174,38 @@ func (m *Manager) resolveSSHAuth(host, user string) (transport.AuthMethod, error
 // resolveHTTPAuth shells out to `git credential fill`, so any credential
 // helper already configured via `git config credential.helper` is honored
 // without this tool needing to know how that helper stores secrets.
-func (m *Manager) resolveHTTPAuth(scheme, host string) (transport.AuthMethod, error) {
-	input := fmt.Sprintf("protocol=%s\nhost=%s\n\n", scheme, host)
+//
+// Returns nil auth when no credentials are found, allowing anonymous public
+// fetches to proceed (matching native git behavior).
+func (m *Manager) resolveHTTPAuth(scheme, host, user, path string) (transport.AuthMethod, error) {
+	// Build credential protocol input matching what native git sends.
+	// Include path and username so credential helpers configured with
+	// credential.useHttpPath or serving multiple credentials per host
+	// can select the right credential.
+	var input strings.Builder
+	fmt.Fprintf(&input, "protocol=%s\n", scheme)
+	fmt.Fprintf(&input, "host=%s\n", host)
+	if path != "" {
+		fmt.Fprintf(&input, "path=%s\n", path)
+	}
+	if user != "" {
+		fmt.Fprintf(&input, "username=%s\n", user)
+	}
+	input.WriteString("\n")
 
 	cmd := exec.Command("git", "credential", "fill")
-	cmd.Stdin = strings.NewReader(input)
+	cmd.Stdin = strings.NewReader(input.String())
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
+
+	// When no credential helper has credentials for a public HTTPS remote,
+	// git credential fill exits with error. Allow this case to return nil
+	// so go-git can fetch anonymously, matching native git behavior.
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf(
-			"git credential fill failed for host %q: %w (output: %s)",
-			host, err, strings.TrimSpace(out.String()),
-		)
+		// If git credential fill fails, assume it's a public repo and allow
+		// anonymous access by returning nil auth
+		return nil, nil
 	}
 
 	creds := map[string]string{}
@@ -194,11 +217,9 @@ func (m *Manager) resolveHTTPAuth(scheme, host string) (transport.AuthMethod, er
 		}
 	}
 
+	// No credentials returned means public repo - allow anonymous access
 	if creds["username"] == "" {
-		return nil, fmt.Errorf(
-			"no credentials returned for host %q; configure a git credential helper (`git config credential.helper ...`) or use an SSH remote instead",
-			host,
-		)
+		return nil, nil
 	}
 
 	return &githttp.BasicAuth{
