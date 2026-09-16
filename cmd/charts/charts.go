@@ -1,4 +1,4 @@
-package monitoring
+package charts
 
 import (
 	"fmt"
@@ -9,14 +9,13 @@ import (
 
 func subCommandList() []*cobra.Command {
 	return []*cobra.Command{
-		getRebaseInfoCmd,
-		testNewVersionCmd,
+		prepareReleaseCmd,
 	}
 }
 
-func RegisterMonitoringSubcommands(cmd *cobra.Command) {
+func RegisterChartsSubCommands(cmd *cobra.Command) {
 	for _, subCmd := range subCommandList() {
-		subCmd.Use = fmt.Sprintf("%s:%s", groups.MonitoringGroup.ID, subCmd.Use)
+		subCmd.Use = fmt.Sprintf("%s:%s", groups.ChartsGroup.ID, subCmd.Use)
 		cmd.AddCommand(subCmd)
 	}
 }

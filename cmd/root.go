@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rancher/ob-charts-tool/cmd/charts"
 	"github.com/rancher/ob-charts-tool/cmd/groups"
 	"github.com/rancher/ob-charts-tool/cmd/monitoring"
 	"github.com/rancher/ob-charts-tool/internal/logging"
@@ -79,7 +80,9 @@ func init() {
 
 	// Init groups then load commands that depend on groups
 	rootCmd.AddGroup(&groups.MonitoringGroup)
+	rootCmd.AddGroup(&groups.ChartsGroup)
 	monitoring.RegisterMonitoringSubcommands(rootCmd)
+	charts.RegisterChartsSubCommands(rootCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
