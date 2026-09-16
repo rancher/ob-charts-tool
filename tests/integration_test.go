@@ -102,7 +102,8 @@ func TestFilterReleaseIntegration(t *testing.T) {
 			require.NoError(t, err, "failed to write input YAML")
 
 			// Call FilterORBSCharts with the temp directory
-			result := preparerelease.FilterORBSCharts(chartFilter, tmpDir)
+			result, err := preparerelease.FilterORBSCharts(chartFilter, tmpDir)
+			require.NoError(t, err, "FilterORBSCharts should not error")
 
 			// Compare results
 			compareReleaseConfigs(t, result, expected)

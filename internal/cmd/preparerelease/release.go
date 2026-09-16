@@ -8,11 +8,10 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-func FilterORBSCharts(filter func(string) bool, chartDir string) map[string][]string {
+func FilterORBSCharts(filter func(string) bool, chartDir string) (map[string][]string, error) {
 	releaseList, err := readReleaseYaml(chartDir)
 	if err != nil {
-		// TODO better error handling
-		panic(err)
+		return nil, fmt.Errorf("failed to read release.yaml: %w", err)
 	}
 
 	orbsReleaseItems := make(releaseConfig, 1)
@@ -22,7 +21,7 @@ func FilterORBSCharts(filter func(string) bool, chartDir string) map[string][]st
 		}
 	}
 
-	return orbsReleaseItems
+	return orbsReleaseItems, nil
 }
 
 type releaseConfig map[string][]string

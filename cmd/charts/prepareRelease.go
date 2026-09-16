@@ -156,12 +156,14 @@ func processRancherMinor(chartDir, automationDir, rancherMinor, chartRemote stri
 
 	// Step 1: Filter ORBS charts from the charts directory
 	fmt.Println(text.Color.Sprint(text.FgYellow, "→ Step 1: Discovering ORBS charts..."))
-	orbsReleases := preparerelease.FilterORBSCharts(chartFilter, chartDir)
+	orbsReleases, err := preparerelease.FilterORBSCharts(chartFilter, chartDir)
+	if err != nil {
+		return fmt.Errorf("failed to read ORBS charts: %w", err)
+	}
 	log.Infof("Found %d ORBS charts", len(orbsReleases))
 
 	// Step 2: Filter by Rancher minor version
 	fmt.Println(text.Color.Sprintf(text.FgYellow, "→ Step 2: Filtering for Rancher %s...", rancherMinor))
-	var err error
 	orbsReleases, err = preparerelease.FilterChartsByRancherMinor(rancherMinor, orbsReleases)
 	if err != nil {
 		return fmt.Errorf("failed to filter charts for Rancher %s: %w", rancherMinor, err)
