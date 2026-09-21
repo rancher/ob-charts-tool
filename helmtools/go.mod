@@ -1,6 +1,6 @@
 module github.com/rancher/ob-charts-tool/helmtools
 
-go 1.26.0
+go 1.27.0
 
 replace (
 	gopkg.in/yaml.v2 v2.2.2 => go.yaml.in/yaml/v2 v2.2.2
