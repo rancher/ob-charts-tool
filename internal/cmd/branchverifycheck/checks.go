@@ -174,12 +174,7 @@ func FindModifiedPackages(packageIndexes map[string]PackageInfo, refs *GitRefs) 
 		// Check if this path belongs to any package in the index
 		for pkgName, pkg := range packageIndexes {
 			// Build the relative package path prefix to check against
-			var packagePrefix string
-			if pkg.HasVersionDir() {
-				packagePrefix = filepath.Join("packages", pkgName, pkg.VersionDir)
-			} else {
-				packagePrefix = filepath.Join("packages", pkgName)
-			}
+			packagePrefix := filepath.Join("packages", pkgName)
 
 			// If the changed file is under this package's directory, mark it as modified
 			if strings.HasPrefix(path, packagePrefix+"/") || path == packagePrefix {
