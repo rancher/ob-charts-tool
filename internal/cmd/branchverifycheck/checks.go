@@ -500,7 +500,11 @@ func CheckBuildNoChanges(repoPath string, pkg PackageInfo) CheckResult {
 	// Run make charts with PACKAGE env var
 	cmd := exec.Command("make", "charts")
 	cmd.Dir = repoPath
-	cmd.Env = append(os.Environ(), "PACKAGE="+pkg.Name)
+	if pkg.VersionDir != "" {
+		cmd.Env = append(os.Environ(), "PACKAGE="+pkg.Name+"/"+pkg.VersionDir)
+	} else {
+		cmd.Env = append(os.Environ(), "PACKAGE="+pkg.Name)
+	}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -566,12 +570,13 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 		return check
 	}
 
-	if pkg.Name == "kube-prometheus-stack" {
+	if pkg.Name == "kube-prometheus-stack" || pkg.Name == "rancher-project-monitoring" {
 		// Skip package images check for kube-prometheus-stack because it should not have images modified at all
+		// Skip package images check for rancher-project-monitoring because it doesn't pin any image
 		// The version of the package is only a slightly modified version of the upstream chart
 		check.Passed = true
 		check.Critical = false
-		check.Message = "Skipping package images check for kube-prometheus-stack"
+		check.Message = "Skipping package images check for " + pkg.Name
 		return check
 	}
 
