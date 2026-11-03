@@ -91,7 +91,7 @@ func FindAllPackages(inPath string) map[string]PackageInfo {
 		// Create a PackageInfo for this package.yaml
 		pkg := newPackageInfo(absPath, inPath)
 		if pkg.Name != "" {
-			packages[pkg.Name] = pkg
+			packages[pkg.FullPath] = pkg
 		}
 
 		return nil
