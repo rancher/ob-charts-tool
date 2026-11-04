@@ -635,6 +635,107 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 	return check
 }
 
+// defaultDisallowedValues are the values charts must not use. Add rules here to extend the check.
+var defaultDisallowedValues = []DisallowedValue{
+	{KeyPath: "repository", Value: "rancher/prom-prometheus", Replacement: "rancher/mirrored-prometheus-prometheus"},
+	{KeyPath: "repository", Value: "rancher/mirrored-prom-prometheus", Replacement: "rancher/mirrored-prometheus-prometheus"},
+}
+
+// CheckDisallowedValues verifies the built chart's values.yaml files do not contain any disallowed value.
+func CheckDisallowedValues(repoPath string, pkg PackageInfo) CheckResult {
+	return checkDisallowedValues(repoPath, pkg, defaultDisallowedValues)
+}
+
+func checkDisallowedValues(repoPath string, pkg PackageInfo, rules []DisallowedValue) CheckResult {
+	check := CheckResult{
+		Name:     fmt.Sprintf("Disallowed Values (%s)", pkg.FullPath),
+		Critical: true,
+	}
+
+	info, err := getPackageVersionInfo(repoPath, pkg)
+	if err != nil {
+		check.Passed = false
+		check.Message = err.Error()
+		return check
+	}
+
+	chartPath := filepath.Join(repoPath, "charts", pkg.Name, info.Version)
+
+	valuesFiles, err := findValuesYAMLFiles(chartPath)
+	if err != nil {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Failed to find values.yaml files: %v", err)
+		return check
+	}
+
+	var hits []DisallowedValueHit
+	for _, valuesFile := range valuesFiles {
+		data, err := os.ReadFile(valuesFile)
+		if err != nil {
+			check.Passed = false
+			check.Message = fmt.Sprintf("Failed to read %s: %v", valuesFile, err)
+			return check
+		}
+
+		var values map[string]interface{}
+		if err := yaml.Unmarshal(data, &values); err != nil {
+			check.Passed = false
+			check.Message = fmt.Sprintf("Failed to parse %s: %v", valuesFile, err)
+			return check
+		}
+
+		relPath, err := filepath.Rel(chartPath, valuesFile)
+		if err != nil {
+			relPath = valuesFile
+		}
+		findDisallowedValues(values, relPath, rules, &hits)
+	}
+
+	if len(hits) > 0 {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Found %d disallowed value(s)", len(hits))
+		check.Details = &DisallowedValueDetails{
+			Hits:         hits,
+			FilesChecked: len(valuesFiles),
+		}
+		return check
+	}
+
+	check.Passed = true
+	check.Message = fmt.Sprintf("No disallowed values found (checked %d values.yaml file(s))", len(valuesFiles))
+	return check
+}
+
+// findDisallowedValues recursively walks a YAML structure and records every string value
+// that matches a rule's key path suffix and exact value.
+func findDisallowedValues(data interface{}, path string, rules []DisallowedValue, hits *[]DisallowedValueHit) {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for key, value := range v {
+			newPath := key
+			if path != "" {
+				newPath = path + "." + key
+			}
+			findDisallowedValues(value, newPath, rules, hits)
+		}
+	case []interface{}:
+		for i, item := range v {
+			findDisallowedValues(item, fmt.Sprintf("%s[%d]", path, i), rules, hits)
+		}
+	case string:
+		for _, rule := range rules {
+			if v == rule.Value && hasKeyPathSuffix(path, rule.KeyPath) {
+				*hits = append(*hits, DisallowedValueHit{Path: path, Rule: rule})
+			}
+		}
+	}
+}
+
+// hasKeyPathSuffix reports whether path ends with keyPath on a key boundary.
+func hasKeyPathSuffix(path, keyPath string) bool {
+	return path == keyPath || strings.HasSuffix(path, "."+keyPath)
+}
+
 // findValuesYAMLFiles recursively finds all values.yaml files in the given directory.
 func findValuesYAMLFiles(dir string) ([]string, error) {
 	var valuesFiles []string

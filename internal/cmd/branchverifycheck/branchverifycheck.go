@@ -154,6 +154,8 @@ func VerifyBranch(path string, jsonOutput bool) (*VerificationResult, error) {
 				CheckBuildNoChanges(path, pkg), "FAILED")
 			packageCheck(progress, pkgResult, fmt.Sprintf("Running package image check for %s (this may take a while)... ", pkg.FullPath),
 				CheckPackageImages(path, pkg), "FAILED")
+			packageCheck(progress, pkgResult, fmt.Sprintf("Checking disallowed values for %s... ", pkg.FullPath),
+				CheckDisallowedValues(path, pkg), "FAILED")
 			packageCheck(progress, pkgResult, fmt.Sprintf("Checking subchart appVersion tags for %s... ", pkg.FullPath),
 				CheckSubchartAppVersionTags(path, pkg), "WARN")
 		}

@@ -681,6 +681,114 @@ func TestCheckPackageImages(t *testing.T) {
 	})
 }
 
+func TestCheckDisallowedValues(t *testing.T) {
+	const currentVersion = "1.0.0"
+	pkgName := "rancher-monitoring"
+
+	setup := func(t *testing.T, valuesYAML string) (string, PackageInfo) {
+		t.Helper()
+		repoPath := t.TempDir()
+		pkg := makePackageInfo(pkgName, "108")
+		setupPackage(t, repoPath, pkg, currentVersion)
+		setupBuiltChart(t, repoPath, pkgName, currentVersion)
+		writeFile(t, filepath.Join(repoPath, "charts", pkgName, currentVersion, "values.yaml"), valuesYAML)
+		return repoPath, pkg
+	}
+
+	t.Run("default rules", func(t *testing.T) {
+		cases := []struct {
+			name       string
+			valuesYAML string
+			wantPassed bool
+		}{
+			{"valid: mirrored-prometheus-prometheus", "prometheus:\n  image:\n    repository: rancher/mirrored-prometheus-prometheus\n", true},
+			{"invalid: prom-prometheus", "prometheus:\n  image:\n    repository: rancher/prom-prometheus\n", false},
+			{"invalid: mirrored-prom-prometheus", "prometheus:\n  image:\n    repository: rancher/mirrored-prom-prometheus\n", false},
+			{"invalid: nested under another key", "a:\n  b:\n    image:\n      repository: rancher/prom-prometheus\n", false},
+			{"invalid: inside a list", "items:\n  - repository: rancher/prom-prometheus\n", false},
+			{"valid: similarly prefixed name", "image:\n  repository: rancher/prom-prometheus-config-reloader\n", true},
+			{"valid: no images", "config:\n  replicas: 3\n", true},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				repoPath, pkg := setup(t, tc.valuesYAML)
+				result := CheckDisallowedValues(repoPath, pkg)
+				assert.Equal(t, tc.wantPassed, result.Passed, "CheckDisallowedValues: %s", result.Message)
+				assert.True(t, result.Critical, "check should be critical")
+			})
+		}
+	})
+
+	t.Run("custom rules", func(t *testing.T) {
+		rules := []DisallowedValue{
+			{KeyPath: "prometheus.image.repository", Value: "bad/one", Replacement: "good/one"},
+			{KeyPath: "tag", Value: "latest", Replacement: "a pinned tag"},
+		}
+		cases := []struct {
+			name       string
+			valuesYAML string
+			wantHits   []string
+		}{
+			{"full key path matches", "prometheus:\n  image:\n    repository: bad/one\n", []string{"values.yaml.prometheus.image.repository"}},
+			{"key path suffix must match on a key boundary", "prometheus:\n  image:\n    myrepository: bad/one\n", nil},
+			{"key path does not match a different parent", "grafana:\n  image:\n    repository: bad/one\n", nil},
+			{"single-key rule matches anywhere", "x:\n  y:\n    tag: latest\n", []string{"values.yaml.x.y.tag"}},
+			{"value must match exactly", "tag: latest-1\n", nil},
+			{"non-string values are ignored", "tag: 5\n", nil},
+			{
+				"multiple rules report multiple hits",
+				"prometheus:\n  image:\n    repository: bad/one\n    tag: latest\n",
+				[]string{"values.yaml.prometheus.image.repository", "values.yaml.prometheus.image.tag"},
+			},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				repoPath, pkg := setup(t, tc.valuesYAML)
+				result := checkDisallowedValues(repoPath, pkg, rules)
+				assert.Equal(t, len(tc.wantHits) == 0, result.Passed, "checkDisallowedValues: %s", result.Message)
+				if len(tc.wantHits) == 0 {
+					return
+				}
+				details, ok := result.Details.(*DisallowedValueDetails)
+				require.True(t, ok, "Details should be *DisallowedValueDetails")
+				var paths []string
+				for _, hit := range details.Hits {
+					paths = append(paths, hit.Path)
+				}
+				assert.ElementsMatch(t, tc.wantHits, paths)
+			})
+		}
+	})
+
+	t.Run("hit carries the rule so the replacement can be reported", func(t *testing.T) {
+		repoPath, pkg := setup(t, "image:\n  repository: rancher/prom-prometheus\n")
+		result := CheckDisallowedValues(repoPath, pkg)
+		require.False(t, result.Passed)
+		details, ok := result.Details.(*DisallowedValueDetails)
+		require.True(t, ok, "Details should be *DisallowedValueDetails")
+		require.Len(t, details.Hits, 1)
+		assert.Equal(t, "rancher/mirrored-prometheus-prometheus", details.Hits[0].Rule.Replacement)
+		assert.Contains(t, details.Format(), "rancher/mirrored-prometheus-prometheus")
+	})
+
+	t.Run("subchart values files are checked", func(t *testing.T) {
+		repoPath, pkg := setup(t, "config:\n  replicas: 3\n")
+		writeFile(t, filepath.Join(repoPath, "charts", pkgName, currentVersion, "charts", "sub", "values.yaml"),
+			"image:\n  repository: rancher/prom-prometheus\n")
+		result := CheckDisallowedValues(repoPath, pkg)
+		assert.False(t, result.Passed)
+	})
+
+	t.Run("no values.yaml files: passes", func(t *testing.T) {
+		repoPath := t.TempDir()
+		pkg := makePackageInfo(pkgName, "108")
+		setupPackage(t, repoPath, pkg, currentVersion)
+		setupBuiltChart(t, repoPath, pkgName, currentVersion)
+		result := CheckDisallowedValues(repoPath, pkg)
+		assert.True(t, result.Passed, result.Message)
+	})
+}
+
 func TestCheckSubchartAppVersionTags(t *testing.T) {
 	const version = "77.0.0"
 	const versionDir = "77.0"
