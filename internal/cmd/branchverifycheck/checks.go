@@ -635,13 +635,100 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 	return check
 }
 
+const (
+	// disallowedPrometheusImage is the image name charts must not use.
+	disallowedPrometheusImage = "rancher/prom-prometheus"
+	// requiredPrometheusImage is the image name charts must use instead.
+	requiredPrometheusImage = "rancher/mirrored-prom-prometheus"
+)
+
 // CheckPrometheusImageName verifies the built chart does not use the `rancher/prom-prometheus` image name.
 // Charts must use `rancher/mirrored-prom-prometheus` instead.
 func CheckPrometheusImageName(repoPath string, pkg PackageInfo) CheckResult {
-	return CheckResult{
+	check := CheckResult{
 		Name:     fmt.Sprintf("Prometheus Image Name (%s)", pkg.FullPath),
 		Critical: true,
-		Passed:   true,
+	}
+
+	info, err := getPackageVersionInfo(repoPath, pkg)
+	if err != nil {
+		check.Passed = false
+		check.Message = err.Error()
+		return check
+	}
+
+	chartPath := filepath.Join(repoPath, "charts", pkg.Name, info.Version)
+
+	valuesFiles, err := findValuesYAMLFiles(chartPath)
+	if err != nil {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Failed to find values.yaml files: %v", err)
+		return check
+	}
+
+	var invalidImages []InvalidImage
+	for _, valuesFile := range valuesFiles {
+		data, err := os.ReadFile(valuesFile)
+		if err != nil {
+			check.Passed = false
+			check.Message = fmt.Sprintf("Failed to read %s: %v", valuesFile, err)
+			return check
+		}
+
+		var values map[string]interface{}
+		if err := yaml.Unmarshal(data, &values); err != nil {
+			check.Passed = false
+			check.Message = fmt.Sprintf("Failed to parse %s: %v", valuesFile, err)
+			return check
+		}
+
+		relPath, err := filepath.Rel(chartPath, valuesFile)
+		if err != nil {
+			relPath = valuesFile
+		}
+		findDisallowedPrometheusImages(values, relPath, &invalidImages)
+	}
+
+	if len(invalidImages) > 0 {
+		check.Passed = false
+		check.Message = fmt.Sprintf("Found %d use(s) of %s; use %s instead",
+			len(invalidImages), disallowedPrometheusImage, requiredPrometheusImage)
+		check.Details = &ImageCheckDetails{
+			InvalidImages: invalidImages,
+			FilesChecked:  len(valuesFiles),
+		}
+		return check
+	}
+
+	check.Passed = true
+	check.Message = fmt.Sprintf("No use of %s found (checked %d values.yaml file(s))", disallowedPrometheusImage, len(valuesFiles))
+	return check
+}
+
+// findDisallowedPrometheusImages recursively searches a YAML structure for any `repository`
+// set to the disallowed prometheus image name and records the path of the map containing it.
+func findDisallowedPrometheusImages(data interface{}, path string, invalidImages *[]InvalidImage) {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		if repo, ok := v["repository"].(string); ok && repo == disallowedPrometheusImage {
+			*invalidImages = append(*invalidImages, InvalidImage{
+				Path: path,
+				Issues: []string{
+					fmt.Sprintf("repository=%s (expected %s)", repo, requiredPrometheusImage),
+				},
+			})
+		}
+		for key, value := range v {
+			newPath := key
+			if path != "" {
+				newPath = path + "." + key
+			}
+			findDisallowedPrometheusImages(value, newPath, invalidImages)
+		}
+	case []interface{}:
+		for i, item := range v {
+			findDisallowedPrometheusImages(item, fmt.Sprintf("%s[%d]", path, i), invalidImages)
+		}
 	}
 }
 
