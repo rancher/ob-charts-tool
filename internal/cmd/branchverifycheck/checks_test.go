@@ -703,6 +703,7 @@ func TestCheckDisallowedValues(t *testing.T) {
 		}{
 			{"valid: mirrored-prometheus-prometheus", "prometheus:\n  image:\n    repository: rancher/mirrored-prometheus-prometheus\n", true},
 			{"invalid: prom-prometheus", "prometheus:\n  image:\n    repository: rancher/prom-prometheus\n", false},
+			{"invalid: mirrored-prom-prometheus", "prometheus:\n  image:\n    repository: rancher/mirrored-prom-prometheus\n", false},
 			{"invalid: nested under another key", "a:\n  b:\n    image:\n      repository: rancher/prom-prometheus\n", false},
 			{"invalid: inside a list", "items:\n  - repository: rancher/prom-prometheus\n", false},
 			{"valid: similarly prefixed name", "image:\n  repository: rancher/prom-prometheus-config-reloader\n", true},
