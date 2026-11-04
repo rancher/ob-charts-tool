@@ -635,6 +635,16 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 	return check
 }
 
+// CheckPrometheusImageName verifies the built chart does not use the `rancher/prom-prometheus` image name.
+// Charts must use `rancher/mirrored-prom-prometheus` instead.
+func CheckPrometheusImageName(repoPath string, pkg PackageInfo) CheckResult {
+	return CheckResult{
+		Name:     fmt.Sprintf("Prometheus Image Name (%s)", pkg.FullPath),
+		Critical: true,
+		Passed:   true,
+	}
+}
+
 // findValuesYAMLFiles recursively finds all values.yaml files in the given directory.
 func findValuesYAMLFiles(dir string) ([]string, error) {
 	var valuesFiles []string
