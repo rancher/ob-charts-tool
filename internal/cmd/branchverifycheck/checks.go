@@ -635,18 +635,19 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 	return check
 }
 
-const (
-	// disallowedPrometheusImage is the image name charts must not use.
-	disallowedPrometheusImage = "rancher/prom-prometheus"
-	// requiredPrometheusImage is the image name charts must use instead.
-	requiredPrometheusImage = "rancher/mirrored-prom-prometheus"
-)
+// defaultDisallowedValues are the values charts must not use. Add rules here to extend the check.
+var defaultDisallowedValues = []DisallowedValue{
+	{KeyPath: "repository", Value: "rancher/prom-prometheus", Replacement: "rancher/mirrored-prom-prometheus"},
+}
 
-// CheckPrometheusImageName verifies the built chart does not use the `rancher/prom-prometheus` image name.
-// Charts must use `rancher/mirrored-prom-prometheus` instead.
-func CheckPrometheusImageName(repoPath string, pkg PackageInfo) CheckResult {
+// CheckDisallowedValues verifies the built chart's values.yaml files do not contain any disallowed value.
+func CheckDisallowedValues(repoPath string, pkg PackageInfo) CheckResult {
+	return checkDisallowedValues(repoPath, pkg, defaultDisallowedValues)
+}
+
+func checkDisallowedValues(repoPath string, pkg PackageInfo, rules []DisallowedValue) CheckResult {
 	check := CheckResult{
-		Name:     fmt.Sprintf("Prometheus Image Name (%s)", pkg.FullPath),
+		Name:     fmt.Sprintf("Disallowed Values (%s)", pkg.FullPath),
 		Critical: true,
 	}
 
@@ -666,7 +667,7 @@ func CheckPrometheusImageName(repoPath string, pkg PackageInfo) CheckResult {
 		return check
 	}
 
-	var invalidImages []InvalidImage
+	var hits []DisallowedValueHit
 	for _, valuesFile := range valuesFiles {
 		data, err := os.ReadFile(valuesFile)
 		if err != nil {
@@ -686,68 +687,52 @@ func CheckPrometheusImageName(repoPath string, pkg PackageInfo) CheckResult {
 		if err != nil {
 			relPath = valuesFile
 		}
-		findDisallowedPrometheusImages(values, relPath, &invalidImages)
+		findDisallowedValues(values, relPath, rules, &hits)
 	}
 
-	if len(invalidImages) > 0 {
+	if len(hits) > 0 {
 		check.Passed = false
-		check.Message = fmt.Sprintf("Found %d use(s) of %s; use %s instead",
-			len(invalidImages), disallowedPrometheusImage, requiredPrometheusImage)
-		check.Details = &ImageCheckDetails{
-			InvalidImages: invalidImages,
-			FilesChecked:  len(valuesFiles),
+		check.Message = fmt.Sprintf("Found %d disallowed value(s)", len(hits))
+		check.Details = &DisallowedValueDetails{
+			Hits:         hits,
+			FilesChecked: len(valuesFiles),
 		}
 		return check
 	}
 
 	check.Passed = true
-	check.Message = fmt.Sprintf("No use of %s found (checked %d values.yaml file(s))", disallowedPrometheusImage, len(valuesFiles))
+	check.Message = fmt.Sprintf("No disallowed values found (checked %d values.yaml file(s))", len(valuesFiles))
 	return check
 }
 
-// findDisallowedPrometheusImages recursively searches a YAML structure for any `repository`
-// set to the disallowed prometheus image name and records the path of the map containing it.
-func findDisallowedPrometheusImages(data interface{}, path string, invalidImages *[]InvalidImage) {
+// findDisallowedValues recursively walks a YAML structure and records every string value
+// that matches a rule's key path suffix and exact value.
+func findDisallowedValues(data interface{}, path string, rules []DisallowedValue, hits *[]DisallowedValueHit) {
 	switch v := data.(type) {
 	case map[string]interface{}:
-		if repo, ok := v["repository"].(string); ok && repo == disallowedPrometheusImage {
-			*invalidImages = append(*invalidImages, InvalidImage{
-				Path: path,
-				Issues: []string{
-					fmt.Sprintf("repository=%s (expected %s)", repo, requiredPrometheusImage),
-				},
-			})
-		}
 		for key, value := range v {
 			newPath := key
 			if path != "" {
 				newPath = path + "." + key
 			}
-			findDisallowedPrometheusImages(value, newPath, invalidImages)
+			findDisallowedValues(value, newPath, rules, hits)
 		}
 	case []interface{}:
 		for i, item := range v {
-			findDisallowedPrometheusImages(item, fmt.Sprintf("%s[%d]", path, i), invalidImages)
+			findDisallowedValues(item, fmt.Sprintf("%s[%d]", path, i), rules, hits)
+		}
+	case string:
+		for _, rule := range rules {
+			if v == rule.Value && hasKeyPathSuffix(path, rule.KeyPath) {
+				*hits = append(*hits, DisallowedValueHit{Path: path, Rule: rule})
+			}
 		}
 	}
 }
 
-// defaultDisallowedValues are the values charts must not use. Add rules here to extend the check.
-var defaultDisallowedValues = []DisallowedValue{
-	{KeyPath: "repository", Value: "rancher/prom-prometheus", Replacement: "rancher/mirrored-prom-prometheus"},
-}
-
-// CheckDisallowedValues verifies the built chart's values.yaml files do not contain any disallowed value.
-func CheckDisallowedValues(repoPath string, pkg PackageInfo) CheckResult {
-	return checkDisallowedValues(repoPath, pkg, defaultDisallowedValues)
-}
-
-func checkDisallowedValues(repoPath string, pkg PackageInfo, rules []DisallowedValue) CheckResult {
-	return CheckResult{
-		Name:     fmt.Sprintf("Disallowed Values (%s)", pkg.FullPath),
-		Critical: true,
-		Passed:   true,
-	}
+// hasKeyPathSuffix reports whether path ends with keyPath on a key boundary.
+func hasKeyPathSuffix(path, keyPath string) bool {
+	return path == keyPath || strings.HasSuffix(path, "."+keyPath)
 }
 
 // findValuesYAMLFiles recursively finds all values.yaml files in the given directory.
