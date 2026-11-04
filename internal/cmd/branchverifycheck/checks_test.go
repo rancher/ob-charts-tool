@@ -701,7 +701,7 @@ func TestCheckDisallowedValues(t *testing.T) {
 			valuesYAML string
 			wantPassed bool
 		}{
-			{"valid: mirrored-prom-prometheus", "prometheus:\n  image:\n    repository: rancher/mirrored-prom-prometheus\n", true},
+			{"valid: mirrored-prometheus-prometheus", "prometheus:\n  image:\n    repository: rancher/mirrored-prometheus-prometheus\n", true},
 			{"invalid: prom-prometheus", "prometheus:\n  image:\n    repository: rancher/prom-prometheus\n", false},
 			{"invalid: nested under another key", "a:\n  b:\n    image:\n      repository: rancher/prom-prometheus\n", false},
 			{"invalid: inside a list", "items:\n  - repository: rancher/prom-prometheus\n", false},
@@ -766,8 +766,8 @@ func TestCheckDisallowedValues(t *testing.T) {
 		details, ok := result.Details.(*DisallowedValueDetails)
 		require.True(t, ok, "Details should be *DisallowedValueDetails")
 		require.Len(t, details.Hits, 1)
-		assert.Equal(t, "rancher/mirrored-prom-prometheus", details.Hits[0].Rule.Replacement)
-		assert.Contains(t, details.Format(), "rancher/mirrored-prom-prometheus")
+		assert.Equal(t, "rancher/mirrored-prometheus-prometheus", details.Hits[0].Rule.Replacement)
+		assert.Contains(t, details.Format(), "rancher/mirrored-prometheus-prometheus")
 	})
 
 	t.Run("subchart values files are checked", func(t *testing.T) {

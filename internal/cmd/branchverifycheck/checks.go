@@ -637,7 +637,7 @@ func CheckPackageImages(repoPath string, pkg PackageInfo) CheckResult {
 
 // defaultDisallowedValues are the values charts must not use. Add rules here to extend the check.
 var defaultDisallowedValues = []DisallowedValue{
-	{KeyPath: "repository", Value: "rancher/prom-prometheus", Replacement: "rancher/mirrored-prom-prometheus"},
+	{KeyPath: "repository", Value: "rancher/prom-prometheus", Replacement: "rancher/mirrored-prometheus-prometheus"},
 }
 
 // CheckDisallowedValues verifies the built chart's values.yaml files do not contain any disallowed value.
