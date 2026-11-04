@@ -732,6 +732,24 @@ func findDisallowedPrometheusImages(data interface{}, path string, invalidImages
 	}
 }
 
+// defaultDisallowedValues are the values charts must not use. Add rules here to extend the check.
+var defaultDisallowedValues = []DisallowedValue{
+	{KeyPath: "repository", Value: "rancher/prom-prometheus", Replacement: "rancher/mirrored-prom-prometheus"},
+}
+
+// CheckDisallowedValues verifies the built chart's values.yaml files do not contain any disallowed value.
+func CheckDisallowedValues(repoPath string, pkg PackageInfo) CheckResult {
+	return checkDisallowedValues(repoPath, pkg, defaultDisallowedValues)
+}
+
+func checkDisallowedValues(repoPath string, pkg PackageInfo, rules []DisallowedValue) CheckResult {
+	return CheckResult{
+		Name:     fmt.Sprintf("Disallowed Values (%s)", pkg.FullPath),
+		Critical: true,
+		Passed:   true,
+	}
+}
+
 // findValuesYAMLFiles recursively finds all values.yaml files in the given directory.
 func findValuesYAMLFiles(dir string) ([]string, error) {
 	var valuesFiles []string

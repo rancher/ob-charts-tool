@@ -230,3 +230,37 @@ func (d *SubchartTagCheckDetails) Format() string {
 	}
 	return sb.String()
 }
+
+// DisallowedValue is a rule describing a values.yaml value that must not be used.
+type DisallowedValue struct {
+	// KeyPath is a dot-separated key path suffix, matched on key boundaries
+	// (e.g. "repository" matches any repository key; "prometheus.image.repository" is stricter).
+	KeyPath string `json:"keyPath"`
+	// Value is the illegal value; matched exactly against string values.
+	Value string `json:"value"`
+	// Replacement is a hint describing what to use instead.
+	Replacement string `json:"replacement"`
+}
+
+// DisallowedValueHit is a single occurrence of a disallowed value.
+type DisallowedValueHit struct {
+	Path string          `json:"path"`
+	Rule DisallowedValue `json:"rule"`
+}
+
+// DisallowedValueDetails contains details about disallowed values found in values.yaml files
+type DisallowedValueDetails struct {
+	Hits         []DisallowedValueHit `json:"hits"`
+	FilesChecked int                  `json:"filesChecked"`
+}
+
+// Format returns a formatted string representation of the disallowed value details
+func (d *DisallowedValueDetails) Format() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Found %d disallowed value(s) in %d values.yaml file(s):\n\n", len(d.Hits), d.FilesChecked))
+	for _, hit := range d.Hits {
+		sb.WriteString(fmt.Sprintf("  • %s\n", hit.Path))
+		sb.WriteString(fmt.Sprintf("    - %s=%s (use %s)\n", hit.Rule.KeyPath, hit.Rule.Value, hit.Rule.Replacement))
+	}
+	return sb.String()
+}
