@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // Index represents a Helm chart repository index.yaml file.
