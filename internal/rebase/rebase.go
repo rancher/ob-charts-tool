@@ -7,7 +7,7 @@ import (
 	"github.com/rancher/ob-charts-tool/helmtools/util"
 	"github.com/rancher/ob-charts-tool/internal"
 	log "github.com/sirupsen/logrus"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 const (

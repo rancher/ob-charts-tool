@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/rancher/ob-charts-tool/helmtools/util"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // Dependency represents a Helm chart dependency.
