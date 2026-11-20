@@ -71,3 +71,76 @@ func TestFilterSlice(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 }
+
+func TestUnique(t *testing.T) {
+	t.Run("integers with duplicates", func(t *testing.T) {
+		input := []int{1, 2, 3, 2, 4, 1, 5, 3}
+		result := Unique(input)
+		assert.Equal(t, []int{1, 2, 3, 4, 5}, result)
+	})
+
+	t.Run("integers without duplicates", func(t *testing.T) {
+		input := []int{1, 2, 3, 4, 5}
+		result := Unique(input)
+		assert.Equal(t, []int{1, 2, 3, 4, 5}, result)
+	})
+
+	t.Run("strings with duplicates", func(t *testing.T) {
+		input := []string{"apple", "banana", "apple", "cherry", "banana", "date"}
+		result := Unique(input)
+		assert.Equal(t, []string{"apple", "banana", "cherry", "date"}, result)
+	})
+
+	t.Run("strings without duplicates", func(t *testing.T) {
+		input := []string{"apple", "banana", "cherry"}
+		result := Unique(input)
+		assert.Equal(t, []string{"apple", "banana", "cherry"}, result)
+	})
+
+	t.Run("all duplicates", func(t *testing.T) {
+		input := []int{5, 5, 5, 5, 5}
+		result := Unique(input)
+		assert.Equal(t, []int{5}, result)
+	})
+
+	t.Run("empty slice", func(t *testing.T) {
+		input := []int{}
+		result := Unique(input)
+		assert.Equal(t, []int{}, result)
+		assert.NotNil(t, result, "should return empty slice, not nil")
+	})
+
+	t.Run("single element", func(t *testing.T) {
+		input := []string{"single"}
+		result := Unique(input)
+		assert.Equal(t, []string{"single"}, result)
+	})
+
+	t.Run("preserves order of first occurrence", func(t *testing.T) {
+		input := []string{"z", "a", "z", "b", "a", "c"}
+		result := Unique(input)
+		assert.Equal(t, []string{"z", "a", "b", "c"}, result)
+	})
+
+	t.Run("version strings with duplicates", func(t *testing.T) {
+		input := []string{
+			"110.0.2+up4.10.0-rancher.27",
+			"110.0.2+up4.10.0-rancher.24",
+			"110.0.2+up4.10.0-rancher.27",
+			"110.0.0+up4.10.0-rancher.25",
+		}
+		result := Unique(input)
+		expected := []string{
+			"110.0.2+up4.10.0-rancher.27",
+			"110.0.2+up4.10.0-rancher.24",
+			"110.0.0+up4.10.0-rancher.25",
+		}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("booleans with duplicates", func(t *testing.T) {
+		input := []bool{true, false, true, false, true}
+		result := Unique(input)
+		assert.Equal(t, []bool{true, false}, result)
+	})
+}

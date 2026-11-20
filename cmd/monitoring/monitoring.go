@@ -14,14 +14,9 @@ func subCommandList() []*cobra.Command {
 	}
 }
 
-func init() {
-	for _, cmd := range subCommandList() {
-		cmd.Use = fmt.Sprintf("%s:%s", groups.MonitoringGroup.ID, cmd.Use)
-	}
-}
-
 func RegisterMonitoringSubcommands(cmd *cobra.Command) {
 	for _, subCmd := range subCommandList() {
+		subCmd.Use = fmt.Sprintf("%s:%s", groups.MonitoringGroup.ID, subCmd.Use)
 		cmd.AddCommand(subCmd)
 	}
 }
